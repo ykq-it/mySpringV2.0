@@ -11,7 +11,7 @@
 
   <servlet>
     <servlet-name>myMVC</servlet-name>
-    <servlet-class>com.my.mvcFramework.v1.servlet.MyDispatcherServlet</servlet-class>
+    <servlet-class>com.my.spring.framework.webmvc.servlet.MyDispatcherServlet</servlet-class>
     <init-param>
       <param-name>contextConfigLocation</param-name>
       <param-value>classpath:application.properties</param-value>
