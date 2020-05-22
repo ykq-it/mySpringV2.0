@@ -35,7 +35,7 @@ public class MyBeanDefinitionReader {
     }
 
     /**
-     * 功能描述：
+     * 功能描述：处理web.xml中的配置文件并转为Properties配置类。接着触发包扫描
      * @author ykq
      * @date 2020/5/13 20:28
      * @param
@@ -43,8 +43,9 @@ public class MyBeanDefinitionReader {
      */
     public MyBeanDefinitionReader(String... locations) {
         // 通过URL定位找到其所对应的文件，然后转换为文件流
+        // getClassLoader()获取的可以理解为/WEB-INF/classes/的目录
         // TODO 此处仅加载了一个配置文件，多配置文件情况下需要拓展
-        InputStream is = this.getClass().getClassLoader().getResourceAsStream(locations[0].replace("classPath:", ""));
+        InputStream is = this.getClass().getClassLoader().getResourceAsStream(locations[0].replace("classpath:", ""));
 
         try {
             // 将配置文件中的信息加载到Properties里
@@ -67,14 +68,15 @@ public class MyBeanDefinitionReader {
     }
 
     /**
-     * 功能描述： 扫描（遍历）配置文件指定的包，保存需要注测到IoC的类的全类名，以便反射生成实例
+     * 功能描述： 扫描（遍历）配置文件指定的包，保存全类名到reader的registerBeanClasses。以后需要注册到IoC的类的，以便反射生成实例
      * @author ykq
      * @date 2020/5/13 20:37
      * @param
      * @return
      */
     private void doScanner(String scanPackage) {
-        // 将scanPackage的路径名转换为（根目录下的）文件名（.替换为/），为了遍历文件。
+        // 将scanPackage的类路径转换为（根目录下的）文件路径（.替换为/），为了遍历文件。
+        // 得到的url为/D:/Tools/apache-tomcat-7.0.59/webapps/mySpring2_war/WEB-INF/classes/com/my/demo/
         URL url = this.getClass().getClassLoader().getResource("/" + scanPackage.replace(".", "/"));
         File classPath = new File(url.getFile());
         for (File file : classPath.listFiles()) {
@@ -88,7 +90,7 @@ public class MyBeanDefinitionReader {
 
                 // 获得class文件的全路径，并保存的全局变量
                 String className = scanPackage + "." + file.getName().replace(".class", "");
-                registerBeanClasses.add(className);
+                this.registerBeanClasses.add(className);
             }
         }
     }
@@ -113,11 +115,12 @@ public class MyBeanDefinitionReader {
                     continue;
                 }
 
-                // 将beanDefinition保存到List中
-                // TODO 自定义beanName
+                // 将beanDefinition保存到List中，getSimpleName()获取类名，getName()获取全类名
+                // TODO 1、自定义beanName 2、可以用className替换beanClass.getName()
                 result.add(doCreateBeanDefiniton(toLowerFirstCase(beanClass.getSimpleName()), beanClass.getName()));
 
                 // 找到当前类型类所实现的接口，并将类型类的对象赋值给接口
+                // TODO 一个实现类对应多个接口时怎么处理
                 Class<?>[] interfaces = beanClass.getInterfaces();
                 for (Class iClass : interfaces) {
                     result.add(doCreateBeanDefiniton(toLowerFirstCase(iClass.getSimpleName()), beanClass.getName()));

@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  */
 public class MyDispatcherServlet extends HttpServlet {
 
-    // TODO 干嘛用的？
+    // init()时传入web.xml对应的config，做为标签<init-param>中的key
     private final String LOCATION = "contextConfigLocation";
 
     // TODO 这里很经典？　HandlerMapping里有controller、method、url的patter
@@ -52,8 +52,8 @@ public class MyDispatcherServlet extends HttpServlet {
      */
     @Override
     public void init(ServletConfig config) {
-        // TODO debug看一下参数是怎么传来的
-        // 相当于初始化了IoC容器
+        // 传入的config是web.xml里配置的标签servlet，
+        // 传入config的属性parameters的值，返回context相当于初始化了IoC容器
         context = new MyApplicationContext(config.getInitParameter(LOCATION));
         // 初始化策略
         initStrategies(context);

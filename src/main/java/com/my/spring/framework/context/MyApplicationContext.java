@@ -67,7 +67,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         // 3、注册，把配置信息放到容器里面
         doRegisterBeanDefinition(beanDefinitions);
 
-        // 4、初始化非延迟加载的类
+        // 4、初始化非延迟加载的类 TODO 注入是不是有问题
         doAutowried();
     }
 
@@ -102,13 +102,14 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         // BeanDefinition有factoryBeanName、className
         for (MyBeanDefinition beanDefinition : beanDefinitions) {
             // 父类的beanDefinitionMap是以factoryBeanName作为key，如果在注册之前map中已经有这个key，为了确保Bean的name唯一，则抛异常
+            // TODO 如果要用全类名做key，此处也要校验是否全类名对应的value是否已存在
             if (super.beanDefinitionMap.containsKey(beanDefinition.getFactoryBeanName())) {
                 throw new Exception("The" + beanDefinition.getFactoryBeanName() + "is exist!!");
             }
 
             // key可以不同，但定义是单例的
             super.beanDefinitionMap.put(beanDefinition.getFactoryBeanName(), beanDefinition);
-            super.beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
+//            super.beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
             // 到此为止容器初始化完毕。
             // 总结一下都做了什么？
             // 1、传入locations，获取locations的scanPackage。
@@ -158,6 +159,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
 
             return factoryBeanInstanceCache.get(beanName).getWrapperInstance();
         } catch (Exception e) {
+            // TODO DemoAction之所以可以重复遍历，是不是跟return null有关。
             e.printStackTrace();
             return null;
         }
@@ -179,6 +181,9 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             return;
         }
 
+        // getFields()：获得某个类的所有的公共（public）的字段，包括父类中的字段。
+        // getDeclaredFields()：获得某个类的所有声明的字段，即包括public、private和proteced，但是不包括父类的申明字段。
+        // TODO 看一下源码此处是如何处理的
         Field[] fields = clazz.getFields();
         for (Field field : fields) {
             if (!field.isAnnotationPresent(MyAutowired.class)) {
@@ -187,7 +192,9 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             MyAutowired autowired = field.getAnnotation(MyAutowired.class);
             String autowiredBeanName = autowired.value().trim();
             if ("".equals(autowiredBeanName)) {
-                autowiredBeanName = toLowerFirstCase(field.getType().getName());
+                // 这里应该取类名，而非全类名
+                // autowiredBeanName = toLowerFirstCase(field.getType().getName());
+                autowiredBeanName = toLowerFirstCase(field.getType().getSimpleName());
             }
 
             // 授权

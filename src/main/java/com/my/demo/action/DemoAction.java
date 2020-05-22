@@ -22,7 +22,7 @@ import java.io.IOException;
 public class DemoAction {
 
     @MyAutowired
-    private DemoService demoService;
+    public DemoService demoService;
 
     @MyRequestMapping("/query")
     public void query(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, @MyRequestParam("name") String name) {
