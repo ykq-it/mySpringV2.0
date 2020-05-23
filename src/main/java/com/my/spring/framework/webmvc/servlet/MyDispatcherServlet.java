@@ -107,10 +107,12 @@ public class MyDispatcherServlet extends HttpServlet {
         // Map<String, Method> map;
         // map.put(url, Method);
 
-        // 首先从容器中获取所有的实例
-        String[] beanNames = context.getBeanDefinitionNames();
+        if (context.getBeanDefinitionCount() == 0) {
+            return;
+        }
 
-        for (String beanName : beanNames) {
+        // 首先从容器   n 中获取所有的实例
+        for (String beanName : context.getBeanDefinitionNames()) {
             // 到了MVC层对外提供的方法只有一个getBean()方法。获取beanName对应的一个实例。
             Object controller = context.getBean(beanName);
             // 反射获取类型类

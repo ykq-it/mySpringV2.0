@@ -86,6 +86,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
                 // 从这里开始依赖注入，读取BeanDefinition中的信息，通过反射创建实例并返回。
                 // Spring不会直接将实例放入IoC容器，而是BeanWrapper，目的是为了以后的代理。
                 // 装饰器模式，1、保留原来的OOP关系；2、可以支持代理扩展
+                System.out.println( "getBean: " + factoryBeanName);
                 getBean(factoryBeanName);
             }
         }
@@ -120,8 +121,23 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
 
     }
 
+
+    /***
+     * 功能描述: 用类型类getBean时，用装饰者模式调用传参beanName
+     * @author ykq
+     * @date 2020/5/23 14:10
+     * @param
+     * @return java.lang.Object
+     */
+    @Override
+    public Object getBean(Class<?> beanClass) {
+        // TODO 这样可不可以
+        return getBean(beanClass.getName());
+    }
+
+
     /**
-     * 功能描述： DI的入口
+     * 功能描述： 完成IoC和DI的入口
      * @author ykq
      * @date 2020/5/14 19:57
      * @param
@@ -148,13 +164,13 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             // 3、封装BeanWrapper对象
             MyBeanWrapper beanWrapper = new MyBeanWrapper(instance);
 
-            // 4、保存IoC容器BeanWrapper
+            // 4、保存IoC容器BeanWrapper，完成IoC注册
             factoryBeanInstanceCache.put(beanName, beanWrapper);
 
             // 调用bean后处理器
             beanPostProcessor.postProcessorAfterInitialization(instance, beanName);
 
-            // 5、属性完成注入
+            // 5、DI，属性完成注入
             populateBean(beanName, instance);
 
             return factoryBeanInstanceCache.get(beanName).getWrapperInstance();
@@ -222,7 +238,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         String beanName = beanDefinition.getFactoryBeanName();
         String className = beanDefinition.getBeanClassName();
         try {
-            // 先判断实例map缓存，是否已经生成过当前类型类的实例
+            // 优化：先判断实例map缓存，是否已经生成过当前类型类的实例
             if (factoryBeanObjectCache.containsKey(beanName)) {
                 // 保证单例
                 instance = factoryBeanObjectCache.get(beanName);
@@ -241,23 +257,42 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         return instance;
     }
 
-    @Override
-    public Object getBean(Class<?> beanClass) {
-        // TODO 这样可不可以
-        return getBean(beanClass.getName());
-    }
 
+    /***
+     * 功能描述: 获取beanDefinitionMap所有的key
+     * @author ykq
+     * @date 2020/5/23 14:07
+     * @param
+     * @return java.lang.String[]
+     */
     public String[] getBeanDefinitionNames() {
         return this.beanDefinitionMap.keySet().toArray(new String[this.beanDefinitionMap.size()]);
     }
 
+
+    /***
+     * 功能描述: 获取beanDefinitionMap中的数量
+     * @author ykq
+     * @date 2020/5/23 14:07
+     * @param
+     * @return int
+     */
     public int getBeanDefinitionCount() {
         return this.beanDefinitionMap.size();
     }
 
+
+    /***
+     * 功能描述: 获取配置文件转成的Properties
+     * @author ykq
+     * @date 2020/5/23 14:09
+     * @param
+     * @return java.util.Properties
+     */
     public Properties getConfig() {
         return this.reader.getConfig();
     }
+
 
     /**
      * 功能描述： 获取首字母小写的beanName
