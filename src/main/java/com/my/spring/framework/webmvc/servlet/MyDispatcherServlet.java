@@ -65,33 +65,39 @@ public class MyDispatcherServlet extends HttpServlet {
         // 针对每个用户请求，都会经过一些处理策略处理，最终才能有结果输出
         // 每种策略可以自定义干预，但是最终的结果都一致
         /******************这里就是九大组件******************/
-        // 初始化文件上传解析器，如果请求类型是Mutipart，将通过MutipartResolver进行文件上传解析
+        // 1、多文件上传组件。初始化文件上传解析器，如果请求类型是Mutipart，将通过MutipartResolver进行文件上传解析
         initMutipartResolver(context);
 
-        // 初始化本地化解析器
+        // 2、本地语言环境。初始化本地化解析器
         initLocaleResolver(context);
 
-        // 初始化主题解析器
+        // 3、主题模板处理器。初始化主题解析器
         initThemeResolver(context);
 
         // ******通过HandlerMapping将请求映射到处理器，HandlerMapping用来保存Controller中配置的RequestMapping和Method的对应关系
+        // 4、保存Url映射关系
         initHandlerMappings(context);
 
         // ******通过HandlerAdapter进行多类型的参数动态匹配，HandlerAdapters用来动态匹配Method参数，包括类转换和动态赋值
+        // 5、动态参数适配器
         initHandlerAdapters(context);
 
         // 如果执行过程中遇到异常，将交给HandlerExceptionResolver来解析
+        // 6、异常拦截器
         initHandlerExceptionResolvers(context);
 
         // 直接将请求解析到视图名
+        // 7、视图提取器，从request中获取viewName
         initRequestToViewNameTranslator(context);
 
         // 通过ViewResolvers实现动态模板解析
         // 自己解析一套模板语言
         // 通过ViewResolvers将逻辑视图解析到具体视图实现
+        // 8、视图转换器，模板引擎。
         initViewResolvers(context);
 
         // Flash映射管理器
+        // 9、参数缓存器
         initFlashMapManager(context);
     }
 
