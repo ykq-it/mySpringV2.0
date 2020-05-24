@@ -13,7 +13,7 @@ public class MyModelAndView {
     /** 页面模板的名称 */
     private String viewName;
 
-    /** 忘页面传送的参数 */
+    /** 缓存返回值，往页面传送的参数 */
     private Map<String, ?> model;
 
     public MyModelAndView(String viewName) {

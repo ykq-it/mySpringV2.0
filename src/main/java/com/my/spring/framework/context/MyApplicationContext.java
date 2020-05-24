@@ -216,6 +216,9 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             // 授权
             field.setAccessible(true);
             try {
+                if (null == this.factoryBeanInstanceCache.get(autowiredBeanName)) {
+                    continue;
+                }
                 field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrapperInstance());
             } catch (Exception e) {
                 e.printStackTrace();
@@ -237,6 +240,8 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         Object instance = null;
         String beanName = beanDefinition.getFactoryBeanName();
         String className = beanDefinition.getBeanClassName();
+
+        // TODO 接口不能创建对象
         try {
             // 优化：先判断实例map缓存，是否已经生成过当前类型类的实例
             if (factoryBeanObjectCache.containsKey(beanName)) {
@@ -289,8 +294,8 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
      * @param
      * @return java.util.Properties
      */
-    public Properties getConfig() {
-        return this.reader.getConfig();
+    public Properties getContextConfig() {
+        return this.reader.getContextConfig();
     }
 
 

@@ -24,14 +24,14 @@ public class MyBeanDefinitionReader {
     private List<String> registerBeanClasses = new ArrayList<>();
 
     /** 保存配置文件信息 */
-    private Properties config = new Properties();
+    private Properties contextConfig = new Properties();
 
     /** 固定配置文件中的key，相当于XML的规范？？ */
     private final String SCAN_PACKAGE = "scanPackage";
 
-    // TODO 这个方法有用吗？
-    public Properties getConfig() {
-        return this.config;
+    // TODO 这个方法有用吗？答：在初始化视图解析器时需要获得配置文件中模板的路径
+    public Properties getContextConfig() {
+        return this.contextConfig;
     }
 
     /**
@@ -50,7 +50,7 @@ public class MyBeanDefinitionReader {
         try {
             // 将配置文件中的信息加载到Properties里
             // TODO 如果多配置文件，一样，遍历is加载到Properties中
-            config.load(is);
+            contextConfig.load(is);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -64,7 +64,7 @@ public class MyBeanDefinitionReader {
         }
 
         // 配置保存完毕，开始扫描包
-        doScanner(config.getProperty(SCAN_PACKAGE));
+        doScanner(contextConfig.getProperty(SCAN_PACKAGE));
     }
 
     /**

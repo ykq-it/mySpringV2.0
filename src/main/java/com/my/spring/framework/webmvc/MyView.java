@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @ClassName MyView
+ * @ClassName MyView 一个页面文件对应一个View
  * @Description TODO
  * @Author ykq
  * @Date 2020/5/19
@@ -31,7 +31,15 @@ public class MyView {
         return DEFAULT_CONTENT_TYPE;
     }
 
+    /***
+     * 功能描述: 将处理结果往浏览器页面渲染
+     * @author ykq
+     * @date 2020/5/24 14:38
+     * @param
+     * @return void
+     */
     public void render(Map<String, ?> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        // 将文件变成String，以便编辑内容
         StringBuffer sb = new StringBuffer();
         // 随机访问文件流，mode参数指定用以打开文件的访问模式。
         /*
@@ -47,15 +55,18 @@ public class MyView {
             while (null != (line = ra.readLine())) {
                 // 转换此行的编码格式
                 line = new String(line.getBytes("ISO-8859-1"), "utf-8");
+//                line = new String(line.getBytes("GBK"), "utf-8");
                 // 将给定的正则表达式编译到具有给定标志的模式中。 CASE_INSENSITIVE启用不区分大小写的匹配。
                 // TODO 正则表达式对不对
                 // Pattern指定为字符串的正则表达式必须首先被编译为此类的实例。然后，可将得到的模式用于创建 Matcher 对象，依照正则表达式，该对象可以与任意字符序列匹配。执行匹配所涉及的所有状态都驻留在匹配器中
-                Pattern pattern = Pattern.compile("$\\{[^\\}]+\\}", Pattern.CASE_INSENSITIVE);
+                // 以${开头，以}结尾，中间的内容都算，即使有多个}存在。
+                Pattern pattern = Pattern.compile("\\$\\{[^\\}]+\\}", Pattern.CASE_INSENSITIVE);
                 Matcher matcher = pattern.matcher(line);
 
                 while (matcher.find()) {
                     String paramName = matcher.group();
-                    paramName = paramName.replaceAll("$\\{|\\}", "");
+                    // 替换掉${}，以取得表达式的参数名
+                    paramName = paramName.replaceAll("\\$\\{|\\}", "");
                     Object paramValue = model.get(paramName);
                     if (null == paramValue) {
                         continue;

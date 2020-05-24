@@ -35,7 +35,7 @@ public class MyDispatcherServlet extends HttpServlet {
     // TODO 这里很经典？　HandlerMapping里有controller、method、url的patter
     private List<MyHandlerMapping> handlerMappings = new ArrayList<>();
 
-    // TODO 干嘛用的？
+    // TODO 干嘛用的？Adapter和handler的关联关系，用于通过handler获取Adapter
     private Map<MyHandlerMapping, MyHandlerAdapter> handlerAdapters = new HashMap<>();
 
     // TODO 干嘛用的？
@@ -144,7 +144,7 @@ public class MyDispatcherServlet extends HttpServlet {
                 }
 
                 MyRequestMapping requestMapping = method.getAnnotation(MyRequestMapping.class);
-                String regex = ("/" + baseUrl + requestMapping.value().replaceAll("\\*", ".").replaceAll("/+", "/"));
+                String regex = (baseUrl + requestMapping.value().replaceAll("\\*", ".").replaceAll("/+", "/"));
                 // TODO 看一下这里是干嘛的
                 Pattern pattern = Pattern.compile(regex);
 
@@ -178,15 +178,17 @@ public class MyDispatcherServlet extends HttpServlet {
      */
     private void initViewResolvers(MyApplicationContext context) {
         // 在页面中输入http://localhost/first.html，解析页面名字和模板文件关联的问题
-        // TODO 看一下配置在哪了，看一下是什么
-        String templateRoot = context.getConfig().getProperty("templateRoot");
-        // TODO 获取资源文件的路径？？
+        // 从配置文件找到页面模板的根路径
+        String templateRoot = context.getContextConfig().getProperty("templateRoot");
+        // 获取资源文件的路径
         String templateRootPath = this.getClass().getClassLoader().getResource(templateRoot).getFile();
-        // TODO 获取文件夹
+        // 通过资源文件的路径获取文件夹
         File templateRootDir = new File(templateRootPath);
 
         for (File template : templateRootDir.listFiles()) {
             // TODO 为什么传templateRoot，应该是template吧？？？
+//            this.viewResolvers.add(new MyViewResolver(templateRoot));
+            // TODO 应该传入上级文件目录
             this.viewResolvers.add(new MyViewResolver(templateRoot));
         }
     }
@@ -223,31 +225,46 @@ public class MyDispatcherServlet extends HttpServlet {
         try {
             doDispatcher(req, resp);
         } catch (Exception e) {
-            e.printStackTrace();
+            try {
+                processDispatcherResult(req, resp, new MyModelAndView("505"));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                resp.getWriter().write("505, server error!");
+            }
         }
     }
 
     /**
-     * 功能描述：
+     * 功能描述：处理请求的入口
      * @author ykq
      * @date 2020/5/19 20:56
      * @param
      * @return
      */
     private void doDispatcher(HttpServletRequest req, HttpServletResponse resp) throws Exception {
-        // 根据用户请求的URL获取一个Handler
+        // 1、根据用户请求的URL获取一个HandlerMapping
         MyHandlerMapping handler = getHandler(req);
 
         if (null == handler) {
+            // 统一处理返回结果
             processDispatcherResult(req, resp, new MyModelAndView("404"));
             return;
         }
 
+        // 2、适配器模式。根据一个HandlerMapping获得一个HandlerAdapter，动态解析参数。
         MyHandlerAdapter handlerAdapter = getHandlerAdapter(handler);
+
+        // 3、解析某一个方法的返回值后，统一封装成ModelAndView
+        MyModelAndView mv = handlerAdapter.handler(req, resp, handler);
+
+        // 4、将mv变成一个可以输出的结果--ViewResolver
+        processDispatcherResult(req, resp, mv);
+
+
     }
 
     /**
-     * 功能描述：
+     * 功能描述：Adapter和handler
      * @author ykq
      * @date 2020/5/19 20:56
      * @param
@@ -267,7 +284,7 @@ public class MyDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * 功能描述： 没有相应的处理器，则生成404页面
+     * 功能描述： 统一输出结果的方法、没有相应的处理器，则生成404页面
      * @author ykq
      * @date 2020/5/19 19:39
      * @param
@@ -276,6 +293,7 @@ public class MyDispatcherServlet extends HttpServlet {
     private void processDispatcherResult(HttpServletRequest req, HttpServletResponse resp, MyModelAndView mv) throws Exception {
         // 调用viewResolver的resolverViewName()方法
         if (null == mv) {
+            // 如果是空，则用response输出即可
             return;
         }
 
@@ -284,19 +302,28 @@ public class MyDispatcherServlet extends HttpServlet {
         }
 
 //        if (this.viewResolvers != null) {   不太好，自以为用size>0比较好
-        if (0 < this.viewResolvers.size()) {
-            for (MyViewResolver viewResolver : this.viewResolvers) {
-                MyView view = viewResolver.resolveViewName(mv.getViewName(), null);
-                if (null != view) {
-                    view.render(mv.getModel(), req, resp);
-                    return;
-                }
+//        if (0 < this.viewResolvers.size()) {
+        for (MyViewResolver viewResolver : this.viewResolvers) {
+            MyView view = viewResolver.resolveViewName(mv.getViewName(), null);
+
+            // 往浏览器输出
+            if (null != view) {
+                // 渲染
+                view.render(mv.getModel(), req, resp);
+                return;
             }
         }
+//        }
     }
 
 
-    // TODO 这段要好好看看
+    /**
+     * 功能描述: 获取对应处理器  TODO 这段要好好看看
+     * @author ykq
+     * @date 2020/5/23 19:36
+     * @param
+     * @return com.my.spring.framework.webmvc.MyHandlerMapping
+     */
     private MyHandlerMapping getHandler(HttpServletRequest req) {
         if (this.handlerMappings.isEmpty()) {
             return null;
