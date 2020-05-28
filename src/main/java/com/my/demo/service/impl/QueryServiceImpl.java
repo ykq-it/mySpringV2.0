@@ -22,7 +22,8 @@ public class QueryServiceImpl implements QueryService {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String time = simpleDateFormat.format(new Date());
         String json = "{name: \"" + name + "\", time:\"" + time + "\"}";
-        log.info("这是在业务方法中打印的：" + json);
+        System.out.println("这是在业务方法中打印的：" + json);
+//        log.info("这是在业务方法中打印的：" + json);
         return json;
     }
 }
