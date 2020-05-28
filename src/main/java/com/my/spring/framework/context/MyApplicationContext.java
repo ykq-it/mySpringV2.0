@@ -3,6 +3,9 @@ package com.my.spring.framework.context;
 import com.my.spring.framework.annotation.MyAutowired;
 import com.my.spring.framework.annotation.MyController;
 import com.my.spring.framework.annotation.MyService;
+import com.my.spring.framework.aop.MyJdkDynamicAopProxy;
+import com.my.spring.framework.aop.config.MyAopConfig;
+import com.my.spring.framework.aop.support.MyAdvisedSupport;
 import com.my.spring.framework.beans.config.MyBeanDefinition;
 import com.my.spring.framework.beans.MyBeanWrapper;
 import com.my.spring.framework.beans.support.MyBeanDefinitionReader;
@@ -11,9 +14,7 @@ import com.my.spring.framework.context.support.MyDefaultListableBeanFactory;
 import com.my.spring.framework.core.MyBeanFactory;
 
 import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -37,12 +38,15 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
     /** 通用的IoC容器，保存的是BeanWrapper（有实例、有类型类），（用来保证注册式单例的容器） */
     private Map<String, MyBeanWrapper> factoryBeanInstanceCache = new ConcurrentHashMap<>();
 
+    Map<Object, Field> withoutDIInstanceCache = new ConcurrentHashMap<>();
+
     /** 构造方法 */
     public MyApplicationContext(String... configLocations) {
         this.configLocations = configLocations;
 
         // 父类空实现，需要复写
         try {
+            // 获得配置后，获取BeanDefinition，创建AOP代理实例并注册IoC容器，注入属性
             refresh();
         } catch (Exception e) {
             e.printStackTrace();
@@ -64,7 +68,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         // 2、加载配置文件，扫描相关的类，把它们封装成BeanDefinition的List
         List<MyBeanDefinition> beanDefinitions = reader.loadBeanDefinitions();
 
-        // 3、注册，把配置信息放到容器里面
+        // 3、注册，把配置信息放到缓存容器里面
         doRegisterBeanDefinition(beanDefinitions);
 
         // 4、初始化非延迟加载的类 TODO 注入是不是有问题
@@ -88,6 +92,16 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
                 // 装饰器模式，1、保留原来的OOP关系；2、可以支持代理扩展
                 System.out.println( "getBean: " + factoryBeanName);
                 getBean(factoryBeanName);
+            }
+        }
+
+        while (this.withoutDIInstanceCache.size() > 0) {
+            for (Map.Entry<Object, Field> objectFieldEntry : this.withoutDIInstanceCache.entrySet()) {
+                try {
+                    populateBean(null, objectFieldEntry.getKey());
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -189,7 +203,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
      * @return
      */
     // TODO 循环依赖怎么做。用两个缓存。1、把第一次循环读取结果是空的BeanDefinition存到第一个缓存。2、等第一次循环之后，第二次检查第一次的缓存，再进行赋值。或者用递归
-    private void populateBean(String beanName, Object instance) {
+    private void populateBean(String beanName, Object instance) throws IllegalAccessException {
         Class clazz = instance.getClass();
 
         // TODO 目前只给controller、service注解的类注入，日后扩展resource、component等等。controller等等都是component的子类
@@ -200,30 +214,37 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         // getFields()：获得某个类的所有的公共（public）的字段，包括父类中的字段。
         // getDeclaredFields()：获得某个类的所有声明的字段，即包括public、private和proteced，但是不包括父类的申明字段。
         // TODO 看一下源码此处是如何处理的
-        Field[] fields = clazz.getFields();
+        Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
             if (!field.isAnnotationPresent(MyAutowired.class)) {
                 continue;
             }
-            MyAutowired autowired = field.getAnnotation(MyAutowired.class);
-            String autowiredBeanName = autowired.value().trim();
-            if ("".equals(autowiredBeanName)) {
-                // 这里应该取类名，而非全类名
-                // autowiredBeanName = toLowerFirstCase(field.getType().getName());
-                autowiredBeanName = toLowerFirstCase(field.getType().getSimpleName());
-            }
 
             // 授权
             field.setAccessible(true);
-            try {
-                if (null == this.factoryBeanInstanceCache.get(autowiredBeanName)) {
+            Object fieldValue = field.get(instance); // 得到此属性的值
+            if (null == fieldValue) {
+                MyAutowired autowired = field.getAnnotation(MyAutowired.class);
+                String autowiredBeanName = autowired.value().trim();
+                if ("".equals(autowiredBeanName)) {
+                    // 这里应该取类名，而非全类名
+                    // autowiredBeanName = toLowerFirstCase(field.getType().getName());
+                    autowiredBeanName = toLowerFirstCase(field.getType().getSimpleName());
+                }
+
+                try {
+                    if (null == this.factoryBeanInstanceCache.get(autowiredBeanName)) {
+
+                        withoutDIInstanceCache.put(instance, field);
+                        continue;
+                    }
+                    field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrapperInstance());
+                    withoutDIInstanceCache.remove(instance, field);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // 如果发生异常或者容器中没有就继续
                     continue;
                 }
-                field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrapperInstance());
-            } catch (Exception e) {
-                e.printStackTrace();
-                // 如果发生异常或者容器中没有就继续
-                continue;
             }
         }
 
@@ -250,6 +271,20 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             } else {
                 Class clazz = Class.forName(className);
                 instance = clazz.newInstance();
+
+                /************************AOP开始***********************/
+                // 1、加载AOP的配置文件
+                // TODO 岂不是每个生成实例的对象都会获得一遍AdvisedSupport? 好像是的，每个类对应的AopConfig或许不同
+                MyAdvisedSupport advisedSupport = instantionAopConfig(beanDefinition);
+                advisedSupport.setTargetClass(clazz);
+                advisedSupport.setTarget(instance);
+
+                // 判断规则，要不要生成代理类，如果要就覆盖原生对象。如果不要就不做任何处理，返回原生对象
+                if (advisedSupport.pointCutMath()) {
+                    instance = new MyJdkDynamicAopProxy(advisedSupport).getProxy();
+                }
+                /************************AOP结束***********************/
+
                 factoryBeanObjectCache.put(beanName, instance);
             }
         } catch (ClassNotFoundException e) {
@@ -260,6 +295,31 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             e.printStackTrace();
         }
         return instance;
+    }
+
+    /**
+     * 功能描述： 
+     * @author ykq
+     * @date 2020/5/27 19:17
+     * @param 
+     * @return 
+     */
+    private MyAdvisedSupport instantionAopConfig(MyBeanDefinition beanDefinition) {
+        // 解析配置文件获取aop相关的配置
+        MyAopConfig aopConfig = new MyAopConfig();
+        // 需要编织的类和方法符合的条件
+        aopConfig.setPointCut(this.reader.getContextConfig().getProperty("pointCut"));
+        // 切面类、需要织入的类
+        aopConfig.setAspectClass(this.reader.getContextConfig().getProperty("aspectClass"));
+        // 前置的方法名
+        aopConfig.setAspectBefore(this.reader.getContextConfig().getProperty("aspectBefore"));
+        // 后置的方法名
+        aopConfig.setAspectAfter(this.reader.getContextConfig().getProperty("aspectAfter"));
+        // 异常通知回调方法
+        aopConfig.setAspectAfterThrow(this.reader.getContextConfig().getProperty("aspectAfterThrow"));
+        // 异常类型捕获
+        aopConfig.setAspectAfterThrowingName(this.reader.getContextConfig().getProperty("aspectAfterThrowingName"));
+        return new MyAdvisedSupport(aopConfig);
     }
 
 

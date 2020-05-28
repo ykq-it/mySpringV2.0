@@ -96,7 +96,8 @@ public class MyBeanDefinitionReader {
     }
 
     /**
-     * 功能描述： 保存所有要注册到IoC的类的定义（beanName、全类名className、是否懒加载lazyInit），以便之后的IoC操作
+     * 功能描述： 遍历待注册的全类名，为每个类生成定义类
+     * 保存所有要注册到IoC的类的定义（beanName、全类名className、是否懒加载lazyInit），以便之后的IoC操作
      * @author ykq
      * @date 2020/5/13 21:19
      * @param
@@ -162,6 +163,4 @@ public class MyBeanDefinitionReader {
 //        不能return c.toString();
         return String.valueOf(c);
     }
-
-
 }

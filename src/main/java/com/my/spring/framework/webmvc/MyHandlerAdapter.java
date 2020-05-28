@@ -79,11 +79,11 @@ public class MyHandlerAdapter {
             paramValue[index] = castStringValue(value, paramTypes[index]);
         }
 
-        if (paramIndexMapping.containsKey(HttpServletResponse.class.getName())) {
-            paramValue[paramIndexMapping.get(HttpServletResponse.class.getName())] = req;
-        }
         if (paramIndexMapping.containsKey(HttpServletRequest.class.getName())) {
-            paramValue[paramIndexMapping.get(HttpServletRequest.class.getName())] = resp;
+            paramValue[paramIndexMapping.get(HttpServletRequest.class.getName())] = req;
+        }
+        if (paramIndexMapping.containsKey(HttpServletResponse.class.getName())) {
+            paramValue[paramIndexMapping.get(HttpServletResponse.class.getName())] = resp;
         }
 
         // 调用方法。obj - 从底层方法被调用的对象.args - 用于方法调用的参数
@@ -110,6 +110,7 @@ public class MyHandlerAdapter {
      */
     private Object castStringValue(String value, Class<?> clazz) {
         if (String.class == clazz) {
+            System.out.println();
             return value;
         } else if (Integer.class == clazz) {
             return Integer.valueOf(value);

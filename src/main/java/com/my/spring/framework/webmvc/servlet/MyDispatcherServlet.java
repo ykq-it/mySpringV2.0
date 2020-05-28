@@ -4,6 +4,7 @@ import com.my.spring.framework.annotation.MyController;
 import com.my.spring.framework.annotation.MyRequestMapping;
 import com.my.spring.framework.context.MyApplicationContext;
 import com.my.spring.framework.webmvc.*;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
  * @Date 2020/5/18
  * @Version v1.0.0
  */
+@Slf4j
 public class MyDispatcherServlet extends HttpServlet {
 
     // init()时传入web.xml对应的config，做为标签<init-param>中的key
@@ -226,6 +228,8 @@ public class MyDispatcherServlet extends HttpServlet {
             doDispatcher(req, resp);
         } catch (Exception e) {
             try {
+//                log.info("异常{}", e);
+                System.out.println(e);
                 processDispatcherResult(req, resp, new MyModelAndView("505"));
             } catch (Exception ex) {
                 ex.printStackTrace();
