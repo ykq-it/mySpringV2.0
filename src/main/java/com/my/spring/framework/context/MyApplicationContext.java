@@ -276,11 +276,12 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
                 // 1、加载AOP的配置文件
                 // TODO 岂不是每个生成实例的对象都会获得一遍AdvisedSupport? 好像是的，每个类对应的AopConfig或许不同
                 MyAdvisedSupport advisedSupport = instantionAopConfig(beanDefinition);
-                advisedSupport.setTargetClass(clazz);
+                advisedSupport.setTargetClass(clazz);  // 赋值的同时，解析并为各方法创建增强点和编织增强方法的映射
                 advisedSupport.setTarget(instance);
 
                 // 判断规则，要不要生成代理类，如果要就覆盖原生对象。如果不要就不做任何处理，返回原生对象
                 if (advisedSupport.pointCutMath()) {
+                    // Method threw 'java.lang.NullPointerException' exception. Cannot evaluate com.sun.proxy.$Proxy5.toString()
                     instance = new MyJdkDynamicAopProxy(advisedSupport).getProxy();
                 }
                 /************************AOP结束***********************/
