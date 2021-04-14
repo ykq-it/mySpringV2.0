@@ -5,11 +5,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.example</groupId>
-  <artifactId>mySpring2</artifactId>
+  <artifactId>mySpring2.0</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>war</packaging>
 
-  <name>mySpring2 Maven Webapp</name>
+  <name>mySpring2.0 Maven Webapp</name>
   <!-- FIXME change it to the project's website -->
   <url>http://www.example.com</url>
 
@@ -59,7 +59,7 @@
   </dependencies>
 
   <build>
-    <finalName>mySpring2</finalName>
+    <finalName>mySpring2.0</finalName>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <plugin>
