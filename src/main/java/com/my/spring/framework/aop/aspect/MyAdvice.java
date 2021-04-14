@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 
 /**
  * @ClassName MyAdvice
- * @Description TODO
+ * @Description 当被编织的方法执行时，用来执行被增强的部分。原理利用反射，adviceMethod.invoke(aspect)。每一个方法的各切点分别有一个
  * @Author ykq
  * @Date 2020/5/27
  * @Version v1.0.0

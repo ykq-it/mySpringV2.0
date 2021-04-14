@@ -2,6 +2,7 @@ package com.my.spring.framework.aop;
 
 import com.my.spring.framework.aop.aspect.MyAdvice;
 import com.my.spring.framework.aop.support.MyAdvisedSupport;
+import lombok.Data;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -11,11 +12,12 @@ import java.util.Map;
 
 /**
  * @ClassName MyJdkDynamicAopProxy
- * @Description TODO 动态代理类
+ * @Description 目标类的动态代理类模板
  * @Author ykq
  * @Date 2020/5/27
  * @Version v1.0.0
  */
+@Data
 public class MyJdkDynamicAopProxy implements InvocationHandler {
     private MyAdvisedSupport advisedSupport;
 
@@ -60,6 +62,8 @@ public class MyJdkDynamicAopProxy implements InvocationHandler {
      * @return
      */
     public Object getProxy() {
+        // 因为JDK实现动态代理业务的时候，只能针对接口进行代理。
+//        return Proxy.newProxyInstance(this.getClass().getClassLoader(), Object.class.getInterfaces(), this);
         return Proxy.newProxyInstance(this.getClass().getClassLoader(), this.advisedSupport.getTargetClass().getInterfaces(), this);
     }
 }
