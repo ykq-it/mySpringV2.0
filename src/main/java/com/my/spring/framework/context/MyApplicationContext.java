@@ -10,7 +10,7 @@ import com.my.spring.framework.beans.config.MyBeanDefinition;
 import com.my.spring.framework.beans.MyBeanWrapper;
 import com.my.spring.framework.beans.support.MyBeanDefinitionReader;
 import com.my.spring.framework.config.MyBeanPostProcessor;
-import com.my.spring.framework.context.support.MyDefaultListableBeanFactory;
+import com.my.spring.framework.beans.support.MyDefaultListableBeanFactory;
 import com.my.spring.framework.core.MyBeanFactory;
 
 import java.lang.reflect.Field;
