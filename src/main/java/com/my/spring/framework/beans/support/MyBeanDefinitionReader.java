@@ -121,7 +121,7 @@ public class MyBeanDefinitionReader {
                 result.add(doCreateBeanDefiniton(toLowerFirstCase(beanClass.getSimpleName()), beanClass.getName()));
 
                 // 找到当前类型类所实现的接口，并将类型类的对象赋值给接口
-                // TODO 一个实现类对应多个接口时怎么处理
+                // 一个实现类对应多个接口时怎么处理？只能覆盖，因为Spring就是这么傻
                 Class<?>[] interfaces = beanClass.getInterfaces();
                 for (Class iClass : interfaces) {
                     result.add(doCreateBeanDefiniton(toLowerFirstCase(iClass.getSimpleName()), beanClass.getName()));
@@ -131,7 +131,6 @@ public class MyBeanDefinitionReader {
             }
         }
 
-        // TODO
         return result;
     }
 

@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Date 2020/5/13
  * @Version v1.0.0
  */
-public class MyApplicationContext extends MyDefaultListableBeanFactory implements MyBeanFactory {
+public class MyApplicationContext extends MyDefaultListableBeanFactory {
 
     /** 配置文件的地址 */
     private String[] configLocations;
@@ -71,7 +71,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         // 3、注册，把配置信息放到缓存容器里面
         doRegisterBeanDefinition(beanDefinitions);
 
-        // 4、初始化非延迟加载的类 TODO 注入是不是有问题
+        // 4、初始化非延迟加载的类，完成自动依赖注入 TODO 注入是不是有问题
         doAutowried();
     }
 
@@ -154,8 +154,11 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
      * 功能描述： 完成IoC和DI的入口
      * @author ykq
      * @date 2020/5/14 19:57
-     * @param
-     * @return
+     * 依赖注入从这里开始，通过读取BeanDefinition中的信息，然后通过反射机制创建一个实例并返回
+     * Spring中，不会吧最原始的对象放出去，会用用BeanWrapper进行一次包装
+     * 装饰器模式：
+     *  1、保留原来的OOP关系
+     *  2、需要对它进行扩展，增强（为以后的AOP打基础）
      */
     @Override
     public Object getBean(String beanName) {
@@ -187,7 +190,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
             // 5、DI，属性完成注入
             populateBean(beanName, instance);
 
-            return factoryBeanInstanceCache.get(beanName).getWrapperInstance();
+            return factoryBeanInstanceCache.get(beanName).getWrappedInstance();
         } catch (Exception e) {
             // TODO DemoAction之所以可以重复遍历，是不是跟return null有关。
             e.printStackTrace();
@@ -212,7 +215,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         }
 
         // getFields()：获得某个类的所有的公共（public）的字段，包括父类中的字段。
-        // getDeclaredFields()：获得某个类的所有声明的字段，即包括public、private和proteced，但是不包括父类的申明字段。
+        // getDeclaredFields()：获得某个类的所有声明的字段，即包括public、private和protected，但是不包括父类的申明字段。
         // TODO 看一下源码此处是如何处理的
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
@@ -220,9 +223,10 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
                 continue;
             }
 
-            // 授权
+            // 授权，强制访问
             field.setAccessible(true);
-            Object fieldValue = field.get(instance); // 得到此属性的值
+            // 得到此属性的值
+            Object fieldValue = field.get(instance);
             if (null == fieldValue) {
                 MyAutowired autowired = field.getAnnotation(MyAutowired.class);
                 String autowiredBeanName = autowired.value().trim();
@@ -234,11 +238,10 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
 
                 try {
                     if (null == this.factoryBeanInstanceCache.get(autowiredBeanName)) {
-
                         withoutDIInstanceCache.put(instance, field);
                         continue;
                     }
-                    field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrapperInstance());
+                    field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrappedInstance());
                     withoutDIInstanceCache.remove(instance, field);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -265,9 +268,9 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
         // TODO 接口不能创建对象
         try {
             // 优化：先判断实例map缓存，是否已经生成过当前类型类的实例
-            if (factoryBeanObjectCache.containsKey(beanName)) {
+            if (factoryBeanObjectCache.containsKey(className)) {
                 // 保证单例
-                instance = factoryBeanObjectCache.get(beanName);
+                instance = factoryBeanObjectCache.get(className);
             } else {
                 Class clazz = Class.forName(className);
                 instance = clazz.newInstance();
@@ -286,13 +289,10 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory implement
                 }
                 /************************AOP结束***********************/
 
-                factoryBeanObjectCache.put(beanName, instance);
+                factoryBeanObjectCache.put(className, instance);
+                factoryBeanObjectCache.put(beanDefinition.getFactoryBeanName(), instance);
             }
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return instance;

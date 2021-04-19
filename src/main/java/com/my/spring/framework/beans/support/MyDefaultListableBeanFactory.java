@@ -2,6 +2,7 @@ package com.my.spring.framework.beans.support;
 
 import com.my.spring.framework.beans.config.MyBeanDefinition;
 import com.my.spring.framework.context.support.MyAbstractApplicationContext;
+import com.my.spring.framework.core.MyBeanFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,8 +14,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Date 2020/5/13
  * @Version v1.0.0
  */
-public class MyDefaultListableBeanFactory extends MyAbstractApplicationContext {
+public class MyDefaultListableBeanFactory extends MyAbstractApplicationContext  implements MyBeanFactory  {
 
     /** 存储Bean的配置信息映射--BeanDefinition */
     protected final Map<String, MyBeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
+
+    @Override
+    public Object getBean(String beanName) {
+        return null;
+    }
+
+    @Override
+    public Object getBean(Class<?> beanClass) {
+        return null;
+    }
 }

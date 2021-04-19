@@ -9,20 +9,22 @@ package com.my.spring.framework.beans;
  */
 public class MyBeanWrapper {
 
-    // TODO 为什么保存了实例，又保存对象？
+    // TODO 为什么保存了实例，又保存类型类?
     /** 对象实例 */
-    private Object wrapperInstance;
+    private Object wrappedInstance;
 
-    /** 某一类型类，对wrappedInstance的代理类型 */
+    /** 某一类型类，对wrappedInstance的代理类型
+     *   这个类有可能是包装后的$Proxy0，也可能是原生的
+     */
     private Class<?> wrappedClass;
 
     public MyBeanWrapper(Object wrapperInstance) {
-        this.wrapperInstance = wrapperInstance;
+        this.wrappedInstance = wrapperInstance;
         this.wrappedClass = wrapperInstance.getClass();
     }
 
-    public Object getWrapperInstance() {
-        return this.wrapperInstance;
+    public Object getWrappedInstance() {
+        return this.wrappedInstance;
     }
 
     /**
@@ -33,6 +35,6 @@ public class MyBeanWrapper {
      * @return
      */
     public Class<?> getWrappedClass() {
-        return this.wrapperInstance.getClass();
+        return this.wrappedInstance.getClass();
     }
 }
