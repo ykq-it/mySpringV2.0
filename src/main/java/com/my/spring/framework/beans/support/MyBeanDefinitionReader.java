@@ -64,7 +64,7 @@ public class MyBeanDefinitionReader {
         }
 
         // 配置保存完毕，开始扫描包
-        doScanner(contextConfig.getProperty(SCAN_PACKAGE));
+         doScanner(contextConfig.getProperty(SCAN_PACKAGE));
     }
 
     /**

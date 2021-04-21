@@ -109,14 +109,9 @@ public class MyAdvisedSupport {
                 }
             }
 
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     public void setTarget(Object target) {
