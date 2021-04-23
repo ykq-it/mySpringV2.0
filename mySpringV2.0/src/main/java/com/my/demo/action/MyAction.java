@@ -2,7 +2,10 @@ package com.my.demo.action;
 
 import com.my.demo.service.ModifyService;
 import com.my.demo.service.QueryService;
-import com.my.spring.framework.annotation.*;
+import com.my.spring.framework.annotation.MyAutowired;
+import com.my.spring.framework.annotation.MyController;
+import com.my.spring.framework.annotation.MyRequestMapping;
+import com.my.spring.framework.annotation.MyRequestParam;
 import com.my.spring.framework.webmvc.MyModelAndView;
 
 import javax.servlet.http.HttpServletRequest;

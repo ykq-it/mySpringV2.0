@@ -3,8 +3,6 @@ package com.my.spring.framework.webmvc;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Map;
 import java.util.regex.Matcher;
