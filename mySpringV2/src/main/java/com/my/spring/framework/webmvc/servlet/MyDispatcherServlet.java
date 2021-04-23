@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 /**
  * @ClassName MyDispatcherServlet
- * @Description TODO servlet生命周期有init，service，destory组成。  Servlet作为MVC的启动入口  委派模式
+ * @Description TODO servlet生命周期有init，service，destroy组成。  Servlet作为MVC的启动入口  委派模式
  * @Author ykq
  * @Date 2020/5/18
  * @Version v1.0.0
