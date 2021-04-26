@@ -72,7 +72,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
         // 3、注册，把配置信息放到缓存容器里面
         doRegisterBeanDefinition(beanDefinitions);
 
-        // 4、初始化非延迟加载的类，完成自动依赖注入 TODO 注入是不是有问题
+        // 4、初始化非延迟加载的类，并完成自动依赖注入 TODO 注入是不是有问题
         doAutowried();
     }
 
@@ -162,9 +162,9 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
      *  2、需要对它进行扩展，增强（为以后的AOP打基础）
      */
     @Override
-    public Object getBean(String beanName) {
+    public Object getBean(String factoryBeanName) {
         // 1、获取当前beanName的bean定义
-        MyBeanDefinition beanDefinition = super.beanDefinitionMap.get(beanName);
+        MyBeanDefinition beanDefinition = super.beanDefinitionMap.get(factoryBeanName);
 
         // 生成通知事件
         MyBeanPostProcessor beanPostProcessor = new MyBeanPostProcessor();
@@ -177,21 +177,21 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
 
         try {
             // 调用bean前处理器
-            beanPostProcessor.postProcessorBeforeInitialization(instance, beanName);
+            beanPostProcessor.postProcessorBeforeInitialization(instance, factoryBeanName);
 
             // 3、封装BeanWrapper对象
             MyBeanWrapper beanWrapper = new MyBeanWrapper(instance);
 
             // 4、保存IoC容器BeanWrapper，完成IoC注册
-            factoryBeanInstanceCache.put(beanName, beanWrapper);
+            factoryBeanInstanceCache.put(factoryBeanName, beanWrapper);
 
             // 调用bean后处理器
-            beanPostProcessor.postProcessorAfterInitialization(instance, beanName);
+            beanPostProcessor.postProcessorAfterInitialization(instance, factoryBeanName);
 
             // 5、DI，属性完成注入
-            populateBean(beanName, instance);
+            populateBean(factoryBeanName, instance);
 
-            return factoryBeanInstanceCache.get(beanName).getWrappedInstance();
+            return factoryBeanInstanceCache.get(factoryBeanName).getWrappedInstance();
         } catch (Exception e) {
             // TODO DemoAction之所以可以重复遍历，是不是跟return null有关。
             e.printStackTrace();
@@ -284,7 +284,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
                 advisedSupport.setTarget(instance);
 
                 // 判断规则，要不要生成代理类，如果要就覆盖原生对象。如果不要就不做任何处理，返回原生对象
-                if (advisedSupport.pointCutMath()) {
+                if (advisedSupport.pointCutMatch()) {
                     // Method threw 'java.lang.NullPointerException' exception. Cannot evaluate com.sun.proxy.$Proxy5.toString()
                     instance = new MyJdkDynamicAopProxy(advisedSupport).getProxy();
                 }

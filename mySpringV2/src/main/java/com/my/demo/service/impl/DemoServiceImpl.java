@@ -1,6 +1,8 @@
 package com.my.demo.service.impl;
 
+import com.my.demo.action.DemoAction;
 import com.my.demo.service.DemoService;
+import com.my.spring.framework.annotation.MyAutowired;
 import com.my.spring.framework.annotation.MyService;
 
 /**
@@ -12,6 +14,9 @@ import com.my.spring.framework.annotation.MyService;
  */
 @MyService
 public class DemoServiceImpl implements DemoService {
+    @MyAutowired
+    private DemoAction demoAction;
+
     @Override
     public String get(String name) {
         return "My name is " + name;

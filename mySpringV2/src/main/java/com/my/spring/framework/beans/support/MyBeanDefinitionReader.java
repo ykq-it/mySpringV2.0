@@ -64,7 +64,7 @@ public class MyBeanDefinitionReader {
         }
 
         // 配置保存完毕，开始扫描包
-         doScanner(contextConfig.getProperty(SCAN_PACKAGE));
+        doScanner(contextConfig.getProperty(SCAN_PACKAGE));
     }
 
     /**
@@ -117,14 +117,14 @@ public class MyBeanDefinitionReader {
                 }
 
                 // 将beanDefinition保存到List中，getSimpleName()获取类名，getName()获取全类名
-                // TODO 1、自定义beanName 2、可以用className替换beanClass.getName()
-                result.add(doCreateBeanDefiniton(toLowerFirstCase(beanClass.getSimpleName()), beanClass.getName()));
+                // TODO 1、自定义factoryBeanName 2、可以用className替换beanClass.getName()
+                result.add(doCreateBeanDefinition(toLowerFirstCase(beanClass.getSimpleName()), beanClass.getName()));
 
                 // 找到当前类型类所实现的接口，并将类型类的对象赋值给接口
                 // 一个实现类对应多个接口时怎么处理？只能覆盖，因为Spring就是这么傻
                 Class<?>[] interfaces = beanClass.getInterfaces();
                 for (Class iClass : interfaces) {
-                    result.add(doCreateBeanDefiniton(toLowerFirstCase(iClass.getSimpleName()), beanClass.getName()));
+                    result.add(doCreateBeanDefinition(toLowerFirstCase(iClass.getSimpleName()), beanClass.getName()));
                 }
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
@@ -141,10 +141,10 @@ public class MyBeanDefinitionReader {
      * @param
      * @return
      */
-    private MyBeanDefinition doCreateBeanDefiniton(String beanName, String className) {
+    private MyBeanDefinition doCreateBeanDefinition(String factoryBeanName, String className) {
         // 封装Bean定义对象
         MyBeanDefinition beanDefinition = new MyBeanDefinition();
-        beanDefinition.setFactoryBeanName(beanName);
+        beanDefinition.setFactoryBeanName(factoryBeanName);
         beanDefinition.setBeanClassName(className);
         return beanDefinition;
     }

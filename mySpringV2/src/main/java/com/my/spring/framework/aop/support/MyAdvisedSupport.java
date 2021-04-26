@@ -78,7 +78,7 @@ public class MyAdvisedSupport {
 
             // 遍历目标编织类的方法，为每个方法初始化一套待织入的映射
             for (Method method : this.targetClass.getMethods()) {
-                // TODO 验证toString获得的是什么？
+                // 验证toString获得的是什么？ public java.lang.String com.my.demo.service.impl.DemoServiceImpl.get(java.lang.String) 生成的字符串的规则和切面配置相同，用于正则匹配
                 String methodString = method.toString();
                 if(methodString.contains("throws")){  // 如果method有throw异常，则截断异常
                     methodString = methodString.substring(0,methodString.lastIndexOf("throws")).trim();
@@ -125,7 +125,7 @@ public class MyAdvisedSupport {
      * @param
      * @return
      */
-    public boolean pointCutMath() {
+    public boolean pointCutMatch() {
         return pointCutClassPattern.matcher(this.targetClass.toString()).matches();
     }
 
