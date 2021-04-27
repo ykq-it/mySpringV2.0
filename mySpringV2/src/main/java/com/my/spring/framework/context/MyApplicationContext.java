@@ -11,6 +11,8 @@ import com.my.spring.framework.beans.config.MyBeanDefinition;
 import com.my.spring.framework.beans.support.MyBeanDefinitionReader;
 import com.my.spring.framework.beans.support.MyDefaultListableBeanFactory;
 import com.my.spring.framework.config.MyBeanPostProcessor;
+import com.my.spring.framework.context.support.MyAbstractApplicationContext;
+import com.my.spring.framework.core.MyBeanFactory;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -25,7 +27,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Date 2020/5/13
  * @Version v1.0.0
  */
-public class MyApplicationContext extends MyDefaultListableBeanFactory {
+public class MyApplicationContext extends MyAbstractApplicationContext implements MyBeanFactory {
+
+    /** 上下文持有ListableBeanFactory的引用 */
+    private MyDefaultListableBeanFactory registry = new MyDefaultListableBeanFactory();
 
     /** 配置文件的地址 */
     private String[] configLocations;
@@ -70,10 +75,10 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
         List<MyBeanDefinition> beanDefinitions = reader.loadBeanDefinitions();
 
         // 3、注册，把配置信息放到缓存容器里面
-        doRegisterBeanDefinition(beanDefinitions);
+        registry.doRegisterBeanDefinition(beanDefinitions);
 
         // 4、初始化非延迟加载的类，并完成自动依赖注入 TODO 注入是不是有问题
-        doAutowried();
+        doLoadInstance();
     }
 
     /**
@@ -83,10 +88,10 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
      * @param
      * @return
      */
-    private void doAutowried() {
-        for (Map.Entry<String, MyBeanDefinition> beanDefinitionEntry : super.beanDefinitionMap.entrySet()) {
+    private void doLoadInstance() {
+        for (Map.Entry<String, MyBeanDefinition> beanDefinitionEntry : registry.beanDefinitionMap.entrySet()) {
             String factoryBeanName = beanDefinitionEntry.getKey();
-            if (!super.beanDefinitionMap.get(factoryBeanName).isLazyInit()) {
+            if (!registry.beanDefinitionMap.get(factoryBeanName).isLazyInit()) {
 
                 // 从这里开始依赖注入，读取BeanDefinition中的信息，通过反射创建实例并返回。
                 // Spring不会直接将实例放入IoC容器，而是BeanWrapper，目的是为了以后的代理。
@@ -107,34 +112,6 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
         }
     }
 
-    /**
-     * 功能描述： 通过生成的BeanDefinitionList将bean的定义放到Map中。（注册到父类的beanDefinitionMap）
-     * @author ykq
-     * @date 2020/5/14 19:18
-     * @param
-     * @return
-     */
-    private void doRegisterBeanDefinition(List<MyBeanDefinition> beanDefinitions) throws Exception {
-        // BeanDefinition有factoryBeanName、className
-        for (MyBeanDefinition beanDefinition : beanDefinitions) {
-            // 父类的beanDefinitionMap是以factoryBeanName作为key，如果在注册之前map中已经有这个key，为了确保Bean的name唯一，则抛异常
-            // TODO 如果要用全类名做key，此处也要校验是否全类名对应的value是否已存在
-            if (super.beanDefinitionMap.containsKey(beanDefinition.getFactoryBeanName())) {
-                throw new Exception("The" + beanDefinition.getFactoryBeanName() + "is exist!!");
-            }
-
-            // key可以不同，但定义是单例的
-            super.beanDefinitionMap.put(beanDefinition.getFactoryBeanName(), beanDefinition);
-//            super.beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
-            // 到此为止容器初始化完毕。
-            // 总结一下都做了什么？
-            // 1、传入locations，获取locations的scanPackage。
-            // 2、生成文件目录，遍历.class的文件，保存其全类名到list。
-            // 3、初始化BeanDefinitionList，遍历全类名List。a:保存class的factoryBeanName和全路径；b:保存interface的factoryBeanName和其实现类的全路径。
-            // 4、遍历BeanDefinitionList，将BeanDefinition的factoryBeanName作为key，BeanDefinition作为value，赋值给DefaultListableBeanFactory的beanDefinitionMap。
-        }
-
-    }
 
 
     /***
@@ -164,7 +141,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
     @Override
     public Object getBean(String factoryBeanName) {
         // 1、获取当前beanName的bean定义
-        MyBeanDefinition beanDefinition = super.beanDefinitionMap.get(factoryBeanName);
+        MyBeanDefinition beanDefinition = registry.beanDefinitionMap.get(factoryBeanName);
 
         // 生成通知事件
         MyBeanPostProcessor beanPostProcessor = new MyBeanPostProcessor();
@@ -333,7 +310,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
      * @return java.lang.String[]
      */
     public String[] getBeanDefinitionNames() {
-        return this.beanDefinitionMap.keySet().toArray(new String[this.beanDefinitionMap.size()]);
+        return registry.beanDefinitionMap.keySet().toArray(new String[registry.beanDefinitionMap.size()]);
     }
 
 
@@ -345,7 +322,7 @@ public class MyApplicationContext extends MyDefaultListableBeanFactory {
      * @return int
      */
     public int getBeanDefinitionCount() {
-        return this.beanDefinitionMap.size();
+        return registry.beanDefinitionMap.size();
     }
 
 

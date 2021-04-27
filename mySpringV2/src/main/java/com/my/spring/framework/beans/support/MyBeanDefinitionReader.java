@@ -42,10 +42,18 @@ public class MyBeanDefinitionReader {
      * @return
      */
     public MyBeanDefinitionReader(String... locations) {
+        // 加载配置
+        doLoadConfig(locations[0]);
+
+        // 配置保存完毕，开始扫描包
+        doScanner(contextConfig.getProperty(SCAN_PACKAGE));
+    }
+
+    private void doLoadConfig(String location) {
         // 通过URL定位找到其所对应的文件，然后转换为文件流
         // getClassLoader()获取的可以理解为/WEB-INF/classes/的目录
         // TODO 此处仅加载了一个配置文件，多配置文件情况下需要拓展
-        InputStream is = this.getClass().getClassLoader().getResourceAsStream(locations[0].replace("classpath:", ""));
+        InputStream is = this.getClass().getClassLoader().getResourceAsStream(location.replace("classpath:", ""));
 
         try {
             // 将配置文件中的信息加载到Properties里
@@ -62,9 +70,6 @@ public class MyBeanDefinitionReader {
                 }
             }
         }
-
-        // 配置保存完毕，开始扫描包
-        doScanner(contextConfig.getProperty(SCAN_PACKAGE));
     }
 
     /**
@@ -111,7 +116,7 @@ public class MyBeanDefinitionReader {
                 // 获得className对应的类型类
                 Class beanClass = Class.forName(className);
 
-                // 过滤掉接口，接口不能创建对象
+                // 过滤掉接口，因为后面要拿MyBeanDefinition的className new对象，但接口不能创建对象。
                 if (beanClass.isInterface()) {
                     continue;
                 }
