@@ -119,12 +119,12 @@ public class MyDispatcherServlet extends HttpServlet {
             return;
         }
 
-        // 首先从容器   n 中获取所有的实例
+        // 首先从容器中获取所有的beanName
         for (String beanName : context.getBeanDefinitionNames()) {
             // 到了MVC层对外提供的方法只有一个getBean()方法。获取beanName对应的一个实例。
-            Object controller = context.getBean(beanName);
+            Object instance = context.getBean(beanName);
             // 反射获取类型类
-            Class<?> clazz = controller.getClass();
+            Class<?> clazz = instance.getClass();
 
             if (!clazz.isAnnotationPresent(MyController.class)) {
                 continue;
@@ -150,8 +150,8 @@ public class MyDispatcherServlet extends HttpServlet {
                 // TODO 看一下这里是干嘛的
                 Pattern pattern = Pattern.compile(regex);
 
-                this.handlerMappings.add(new MyHandlerMapping(controller, method, pattern));
-                System.out.println("Mapping" + regex + "," + method);;
+                this.handlerMappings.add(new MyHandlerMapping(instance, method, pattern));
+                System.out.println("Mapping: " + regex + "," + method);;
             }
         }
     }

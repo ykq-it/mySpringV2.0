@@ -44,8 +44,6 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
     /** 通用的IoC容器，保存的是BeanWrapper（有实例、有类型类），（用来保证注册式单例的容器） */
     private Map<String, MyBeanWrapper> factoryBeanInstanceCache = new ConcurrentHashMap<>();
 
-    Map<Object, Field> withoutDIInstanceCache = new ConcurrentHashMap<>();
-
     /** 构造方法 */
     public MyApplicationContext(String... configLocations) {
         this.configLocations = configLocations;
@@ -100,16 +98,6 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 getBean(factoryBeanName);
             }
         }
-
-        while (this.withoutDIInstanceCache.size() > 0) {
-            for (Map.Entry<Object, Field> objectFieldEntry : this.withoutDIInstanceCache.entrySet()) {
-                try {
-                    populateBean(null, objectFieldEntry.getKey());
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
     }
 
 
@@ -147,7 +135,7 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
         MyBeanPostProcessor beanPostProcessor = new MyBeanPostProcessor();
 
         // 2、通过BeanDefinition创建一个真正的实例，反射实例化
-        Object instance = instantiateBean(beanDefinition);
+        Object instance = instantiateBean(factoryBeanName, beanDefinition);
         if (null == instance) {
             return null;
         }
@@ -159,16 +147,16 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
             // 3、封装BeanWrapper对象
             MyBeanWrapper beanWrapper = new MyBeanWrapper(instance);
 
-            // 4、保存IoC容器BeanWrapper，完成IoC注册
+            // 4、DI，属性完成注入。4、5的先后位置没有关系，因为是引用。
+            populateBean(factoryBeanName, beanDefinition, beanWrapper);
+
+            // 5、保存IoC容器BeanWrapper，完成IoC注册
             factoryBeanInstanceCache.put(factoryBeanName, beanWrapper);
 
             // 调用bean后处理器
             beanPostProcessor.postProcessorAfterInitialization(instance, factoryBeanName);
 
-            // 5、DI，属性完成注入
-            populateBean(factoryBeanName, instance);
-
-            return factoryBeanInstanceCache.get(factoryBeanName).getWrappedInstance();
+            return beanWrapper.getWrappedInstance();
         } catch (Exception e) {
             // TODO DemoAction之所以可以重复遍历，是不是跟return null有关。
             e.printStackTrace();
@@ -181,11 +169,13 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
      * @author ykq
      * @date 2020/5/14 20:46
      * @param
+     * @param beanDefinition
      * @return
      */
     // TODO 循环依赖怎么做。用两个缓存。1、把第一次循环读取结果是空的BeanDefinition存到第一个缓存。2、等第一次循环之后，第二次检查第一次的缓存，再进行赋值。或者用递归
-    private void populateBean(String beanName, Object instance) throws IllegalAccessException {
-        Class clazz = instance.getClass();
+    private void populateBean(String beanName, MyBeanDefinition beanDefinition, MyBeanWrapper beanWrapper) throws IllegalAccessException {
+        Object instance = beanWrapper.getWrappedInstance();
+        Class clazz = beanWrapper.getWrappedClass();
 
         // TODO 目前只给controller、service注解的类注入，日后扩展resource、component等等。controller等等都是component的子类
         if (!(clazz.isAnnotationPresent(MyController.class) || clazz.isAnnotationPresent(MyService.class))) {
@@ -195,8 +185,7 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
         // getFields()：获得某个类的所有的公共（public）的字段，包括父类中的字段。
         // getDeclaredFields()：获得某个类的所有声明的字段，即包括public、private和protected，但是不包括父类的申明字段。
         // TODO 看一下源码此处是如何处理的
-        Field[] fields = clazz.getDeclaredFields();
-        for (Field field : fields) {
+        for (Field field : clazz.getDeclaredFields()) {
             if (!field.isAnnotationPresent(MyAutowired.class)) {
                 continue;
             }
@@ -215,12 +204,11 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 }
 
                 try {
-                    if (null == this.factoryBeanInstanceCache.get(autowiredBeanName)) {
-                        withoutDIInstanceCache.put(instance, field);
+                    if (null == factoryBeanInstanceCache.get(autowiredBeanName)) {
+                        // 如果容器中不存在当前属性的bean，则直接跳过
                         continue;
                     }
                     field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrappedInstance());
-                    withoutDIInstanceCache.remove(instance, field);
                 } catch (Exception e) {
                     e.printStackTrace();
                     // 如果发生异常或者容器中没有就继续
@@ -236,11 +224,12 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
      * @author ykq
      * @date 2020/5/14 20:07
      * @param
+     * @param factoryBeanName
      * @return
      */
-    private Object instantiateBean(MyBeanDefinition beanDefinition) {
+    private Object instantiateBean(String factoryBeanName, MyBeanDefinition beanDefinition) {
         Object instance = null;
-        String beanName = beanDefinition.getFactoryBeanName();
+//        String beanName = beanDefinition.getFactoryBeanName();
         String className = beanDefinition.getBeanClassName();
 
         // TODO 接口不能创建对象
@@ -268,7 +257,7 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 /************************AOP结束***********************/
 
                 factoryBeanObjectCache.put(className, instance);
-                factoryBeanObjectCache.put(beanDefinition.getFactoryBeanName(), instance);
+                factoryBeanObjectCache.put(factoryBeanName, instance);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -334,7 +323,7 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
      * @return java.util.Properties
      */
     public Properties getContextConfig() {
-        return this.reader.getContextConfig();
+        return reader.getContextConfig();
     }
 
 
