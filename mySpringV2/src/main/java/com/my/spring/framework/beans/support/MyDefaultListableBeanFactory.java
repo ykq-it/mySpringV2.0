@@ -42,11 +42,15 @@ public class MyDefaultListableBeanFactory implements MyBeanFactory  {
             // 父类的beanDefinitionMap是以factoryBeanName作为key，如果在注册之前map中已经有这个key，为了确保Bean的name唯一，则抛异常
             // TODO 如果要用全类名做key，此处也要校验是否全类名对应的value是否已存在
             if (beanDefinitionMap.containsKey(beanDefinition.getFactoryBeanName())) {
-                throw new Exception("The" + beanDefinition.getFactoryBeanName() + "is exist!!");
+                throw new Exception("The " + beanDefinition.getFactoryBeanName() + " is exist!!");
             }
+//            if (beanDefinitionMap.containsKey(beanDefinition.getBeanClassName())) {
+//                throw new Exception("The " + beanDefinition.getBeanClassName() + " is exist!!");
+//            }
 
             // key可以不同，但定义是单例的
             beanDefinitionMap.put(beanDefinition.getFactoryBeanName(), beanDefinition);
+//            beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
 //            super.beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
             // 到此为止容器初始化完毕。
             // 总结一下都做了什么？

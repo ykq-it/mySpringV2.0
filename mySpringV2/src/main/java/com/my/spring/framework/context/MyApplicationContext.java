@@ -15,9 +15,7 @@ import com.my.spring.framework.context.support.MyAbstractApplicationContext;
 import com.my.spring.framework.core.MyBeanFactory;
 
 import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -38,11 +36,24 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
     /** 配置文件加载和扫描类 */
     private MyBeanDefinitionReader reader;
 
+    /** 标记，创建过的所有的BeanName，循环依赖的标识，标记当前正在创建的BeanName */
+    private Set<String> singletonCurrentlyInCreation = new HashSet<>();
+
+    /** 一级缓存，已经完成依赖注入的Bean，成熟的Bean，所有的，包含各种类型的beanName（eg.类名，自定义等等） */
+    private Map<String, Object> singletonObjects = new ConcurrentHashMap<>();
+
+    /** 二级缓存，早期的纯净Bean，只存正常配置的beanName */
+    private Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>();
+
+    /** 三级缓存，通用的IoC容器，保存的是BeanWrapper（有实例、有类型类），（用来保证注册式单例的容器） */
+    private Map<String, MyBeanWrapper> factoryBeanInstanceCache = new ConcurrentHashMap<>();
+
     /** 单例的<beanName，实例>缓存，（用来保证注册时单例的容器） */
     private Map<String, Object> factoryBeanObjectCache = new ConcurrentHashMap<>();
 
-    /** 通用的IoC容器，保存的是BeanWrapper（有实例、有类型类），（用来保证注册式单例的容器） */
-    private Map<String, MyBeanWrapper> factoryBeanInstanceCache = new ConcurrentHashMap<>();
+    /**************************循环依赖思路1***************************/
+    Map<MyBeanWrapper, Field> withoutDIInstanceCache = new ConcurrentHashMap<>();
+    /**************************循环依赖思路1***************************/
 
     /** 构造方法 */
     public MyApplicationContext(String... configLocations) {
@@ -86,6 +97,21 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
      * @param
      * @return
      */
+
+    /**  TODO 验证一下代理时是否正常
+     * 解决循环依赖的两种思路
+     * 1、树的广度优先搜索（BFS）：前提在注入时是从factoryBeanInstanceCache拿到当前属性对应的实例，
+     * 因此在第一轮注入时，把拿不到对应属性的实例的BeanWrapper缓存起来，
+     * 由于在第一轮注入时，第一层Bean都被创建，且Bean之间的调用是引用调用
+     * 所以第二轮根据上面所缓存的未完成注入的BeanWrapper再进行一次注入，
+     * 此时factoryBeanInstanceCache便能拿到所有的一层Bean的实例
+     * 2、树的深度优先搜索（DFS）：Spring原生的方式，前提在注入时，不是从factoryBeanInstanceCache里拿对应属性的实例，
+     * 而是通过继续getBean的方式，这样的好处是，在每一次的最外层getBean都能拿到注入完整的Bean。
+     * 在创建最外层Bean时，先把Bean缓存到一级缓存，如果出现循环依赖，则在field.set时再次调用getBean创建里层Bean，
+     * 接着会把里层bean也缓存到一级缓存。
+     * 当里层Bean需要field.set外层bean时，由于一级缓存已存在外层Bean，则里层Bean完整创建。
+     * 此时里层递归结束，返回到外层递归。外层获取到完整的里层Bean，因此外层Bean创建完成，递归结束。
+     */
     private void doLoadInstance() {
         for (Map.Entry<String, MyBeanDefinition> beanDefinitionEntry : registry.beanDefinitionMap.entrySet()) {
             String factoryBeanName = beanDefinitionEntry.getKey();
@@ -98,6 +124,18 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 getBean(factoryBeanName);
             }
         }
+
+        /**************************循环依赖思路1（mine）***************************/
+        /*while (withoutDIInstanceCache.size() > 0) {
+            for (Map.Entry<MyBeanWrapper, Field> objectFieldEntry : this.withoutDIInstanceCache.entrySet()) {
+                try {
+                    populateBean(null, null, objectFieldEntry.getKey());
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }*/
+        /**************************循环依赖思路1***************************/
     }
 
 
@@ -131,8 +169,23 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
         // 1、获取当前beanName的bean定义
         MyBeanDefinition beanDefinition = registry.beanDefinitionMap.get(factoryBeanName);
 
+        /**************************循环依赖思路2***************************/
+        // 从一级缓存去拿，成熟的Bean
+        Object singleton = getSingleton(factoryBeanName, beanDefinition);
+        if (null != singleton) {
+            // 如果一级缓存中有成熟的Bean，则直接返回
+            return singleton;
+        }
+
+        if (!singletonCurrentlyInCreation.contains(factoryBeanName)) {
+            // 如果当前BeanName不曾添加过创建标记，则标记
+            singletonCurrentlyInCreation.add(factoryBeanName);
+        }
+        /**************************循环依赖思路2***************************/
+
+
         // 生成通知事件
-        MyBeanPostProcessor beanPostProcessor = new MyBeanPostProcessor();
+//        MyBeanPostProcessor beanPostProcessor = new MyBeanPostProcessor();
 
         // 2、通过BeanDefinition创建一个真正的实例，反射实例化
         Object instance = instantiateBean(factoryBeanName, beanDefinition);
@@ -140,9 +193,14 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
             return null;
         }
 
+        /**************************循环依赖思路2***************************/
+        // 缓存到一级缓存
+        singletonObjects.put(factoryBeanName, instance);
+        /**************************循环依赖思路2***************************/
+
         try {
             // 调用bean前处理器
-            beanPostProcessor.postProcessorBeforeInitialization(instance, factoryBeanName);
+//            beanPostProcessor.postProcessorBeforeInitialization(instance, factoryBeanName);
 
             // 3、封装BeanWrapper对象
             MyBeanWrapper beanWrapper = new MyBeanWrapper(instance);
@@ -154,7 +212,7 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
             factoryBeanInstanceCache.put(factoryBeanName, beanWrapper);
 
             // 调用bean后处理器
-            beanPostProcessor.postProcessorAfterInitialization(instance, factoryBeanName);
+//            beanPostProcessor.postProcessorAfterInitialization(instance, factoryBeanName);
 
             return beanWrapper.getWrappedInstance();
         } catch (Exception e) {
@@ -162,6 +220,25 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
             e.printStackTrace();
             return null;
         }
+    }
+
+    private Object getSingleton(String factoryBeanName, MyBeanDefinition beanDefinition) {
+        // 先去一级缓存拿
+        Object bean = singletonObjects.get(factoryBeanName);
+
+        // 如果一级缓存没有，但又有创建标识，说明是循环依赖
+        if (null == bean && singletonCurrentlyInCreation.contains(factoryBeanName)) {
+            bean = earlySingletonObjects.get(factoryBeanName);
+
+            if (null == bean) {
+                // 如果二级缓存也没有，则从三级缓存中拿
+                bean = instantiateBean(factoryBeanName, beanDefinition);
+                // 将创建出来的对象，放入二级缓存中
+                earlySingletonObjects.put(factoryBeanName, bean);
+            }
+        }
+
+        return bean;
     }
 
     /**
@@ -199,16 +276,23 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 String autowiredBeanName = autowired.value().trim();
                 if ("".equals(autowiredBeanName)) {
                     // 这里应该取类名，而非全类名
-                    // autowiredBeanName = toLowerFirstCase(field.getType().getName());
                     autowiredBeanName = toLowerFirstCase(field.getType().getSimpleName());
                 }
 
                 try {
-                    if (null == factoryBeanInstanceCache.get(autowiredBeanName)) {
-                        // 如果容器中不存在当前属性的bean，则直接跳过
-                        continue;
-                    }
-                    field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrappedInstance());
+                    /**************************循环依赖思路1***************************/
+//                    if (null == factoryBeanInstanceCache.get(autowiredBeanName)) {
+//                        withoutDIInstanceCache.put(beanWrapper, field);
+//                        // 如果容器中不存在当前属性的bean，则直接跳过
+//                        continue;
+//                    }
+//                    field.set(instance, this.factoryBeanInstanceCache.get(autowiredBeanName).getWrappedInstance());
+//                    withoutDIInstanceCache.remove(beanWrapper, field);
+                    /**************************循环依赖思路1***************************/
+
+                    /**************************循环依赖思路2***************************/
+                    field.set(instance, getBean(autowiredBeanName));
+                    /**************************循环依赖思路2***************************/
                 } catch (Exception e) {
                     e.printStackTrace();
                     // 如果发生异常或者容器中没有就继续
@@ -243,17 +327,17 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 instance = clazz.newInstance();
 
                 /************************AOP开始***********************/
-                // 1、加载AOP的配置文件
-                // TODO 岂不是每个生成实例的对象都会获得一遍AdvisedSupport? 好像是的，每个类对应的AopConfig或许不同
-                MyAdvisedSupport advisedSupport = instantionAopConfig(beanDefinition);
-                advisedSupport.setTargetClass(clazz);  // 赋值的同时，解析并为各方法创建增强点和编织增强方法的映射
-                advisedSupport.setTarget(instance);
-
-                // 判断规则，要不要生成代理类，如果要就覆盖原生对象。如果不要就不做任何处理，返回原生对象
-                if (advisedSupport.pointCutMatch()) {
-                    // Method threw 'java.lang.NullPointerException' exception. Cannot evaluate com.sun.proxy.$Proxy5.toString()
-                    instance = new MyJdkDynamicAopProxy(advisedSupport).getProxy();
-                }
+//                // 1、加载AOP的配置文件
+//                // TODO 岂不是每个生成实例的对象都会获得一遍AdvisedSupport? 好像是的，每个类对应的AopConfig或许不同
+//                MyAdvisedSupport advisedSupport = instantionAopConfig(beanDefinition);
+//                advisedSupport.setTargetClass(clazz);  // 赋值的同时，解析并为各方法创建增强点和编织增强方法的映射
+//                advisedSupport.setTarget(instance);
+//
+//                // 判断规则，要不要生成代理类，如果要就覆盖原生对象。如果不要就不做任何处理，返回原生对象
+//                if (advisedSupport.pointCutMatch()) {
+//                    // Method threw 'java.lang.NullPointerException' exception. Cannot evaluate com.sun.proxy.$Proxy5.toString()
+//                    instance = new MyJdkDynamicAopProxy(advisedSupport).getProxy();
+//                }
                 /************************AOP结束***********************/
 
                 factoryBeanObjectCache.put(className, instance);
