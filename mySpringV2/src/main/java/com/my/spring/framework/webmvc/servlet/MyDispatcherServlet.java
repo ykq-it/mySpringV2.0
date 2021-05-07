@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 /**
  * @ClassName MyDispatcherServlet
- * @Description TODO servlet生命周期有init，service，destroy组成。  Servlet作为MVC的启动入口  委派模式
+ * @Description servlet生命周期有init，service，destroy组成。  Servlet的doDispatcher作为MVC的启动入口  委派模式
  * @Author ykq
  * @Date 2020/5/18
  * @Version v1.0.0
@@ -34,13 +34,13 @@ public class MyDispatcherServlet extends HttpServlet {
     // init()时传入web.xml对应的config，做为标签<init-param>中的key
     private final String LOCATION = "contextConfigLocation";
 
-    // TODO 这里很经典？　HandlerMapping里有controller、method、url的patter
+    // 策略模式　HandlerMapping里有controller、method、url的patter
     private List<MyHandlerMapping> handlerMappings = new ArrayList<>();
 
-    // TODO 干嘛用的？Adapter和handler的关联关系，用于通过handler获取Adapter
+    // Adapter和handler的关联关系，用于通过handler获取Adapter
     private Map<MyHandlerMapping, MyHandlerAdapter> handlerAdapters = new HashMap<>();
 
-    // TODO 干嘛用的？
+    // 缓存视图的模板信息，便于通过MV找到对应的视图
     private List<MyViewResolver> viewResolvers = new ArrayList<>();
 
     private MyApplicationContext context;

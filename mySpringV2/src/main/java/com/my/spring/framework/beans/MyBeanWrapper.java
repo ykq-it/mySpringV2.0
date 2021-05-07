@@ -2,7 +2,7 @@ package com.my.spring.framework.beans;
 
 /**
  * @ClassName （配置封装模块）MyBeanWrapper
- * @Description TODO
+ * @Description 保存Bean的封装信息
  * @Author ykq
  * @Date 2020/5/13
  * @Version v1.0.0
