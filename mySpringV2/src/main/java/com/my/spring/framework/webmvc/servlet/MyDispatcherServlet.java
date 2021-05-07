@@ -147,7 +147,7 @@ public class MyDispatcherServlet extends HttpServlet {
 
                 MyRequestMapping requestMapping = method.getAnnotation(MyRequestMapping.class);
                 String regex = (baseUrl + requestMapping.value().replaceAll("\\*", ".").replaceAll("/+", "/"));
-                // TODO 看一下这里是干嘛的
+                // 保存当前方法的正则模板，便于浏览器访问时做对比
                 Pattern pattern = Pattern.compile(regex);
 
                 this.handlerMappings.add(new MyHandlerMapping(instance, method, pattern));
@@ -200,6 +200,11 @@ public class MyDispatcherServlet extends HttpServlet {
 
 
     private void initFlashMapManager(MyApplicationContext context) {
+        /**
+         * FlashMap 缓存参数，闪存，不永久的存
+         * request.forward()，自动携带上一次请求的所有参数
+         * response.redirect()，丢失上一次请求的所有参数
+         */
     }
 
     private void initRequestToViewNameTranslator(MyApplicationContext context) {
