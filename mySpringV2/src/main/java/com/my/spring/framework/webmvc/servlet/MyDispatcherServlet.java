@@ -67,14 +67,14 @@ public class MyDispatcherServlet extends HttpServlet {
         // 针对每个用户请求，都会经过一些处理策略处理，最终才能有结果输出
         // 每种策略可以自定义干预，但是最终的结果都一致
         /******************这里就是九大组件******************/
-        // 1、多文件上传组件。初始化文件上传解析器，如果请求类型是Mutipart，将通过MutipartResolver进行文件上传解析
-        initMutipartResolver(context);
-
-        // 2、本地语言环境。初始化本地化解析器
-        initLocaleResolver(context);
-
-        // 3、主题模板处理器。初始化主题解析器
-        initThemeResolver(context);
+//        // 1、多文件上传组件。初始化文件上传解析器，如果请求类型是Mutipart，将通过MutipartResolver进行文件上传解析
+//        initMutipartResolver(context);
+//
+//        // 2、本地语言环境。初始化本地化解析器
+//        initLocaleResolver(context);
+//
+//        // 3、主题模板处理器。初始化主题解析器
+//        initThemeResolver(context);
 
         // ******通过HandlerMapping将请求映射到处理器，HandlerMapping用来保存Controller中配置的RequestMapping和Method的对应关系
         // 4、保存Url映射关系
@@ -86,21 +86,22 @@ public class MyDispatcherServlet extends HttpServlet {
 
         // 如果执行过程中遇到异常，将交给HandlerExceptionResolver来解析
         // 6、异常拦截器
-        initHandlerExceptionResolvers(context);
-
-        // 直接将请求解析到视图名
-        // 7、视图提取器，从request中获取viewName
-        initRequestToViewNameTranslator(context);
+//        initHandlerExceptionResolvers(context);
+//
+//        // 直接将请求解析到视图名
+//        // 7、视图提取器，从request中获取viewName
+//        initRequestToViewNameTranslator(context);
 
         // 通过ViewResolvers实现动态模板解析
         // 自己解析一套模板语言
         // 通过ViewResolvers将逻辑视图解析到具体视图实现
         // 8、视图转换器，模板引擎。
+
         initViewResolvers(context);
 
         // Flash映射管理器
         // 9、参数缓存器
-        initFlashMapManager(context);
+//        initFlashMapManager(context);
     }
 
     /**
@@ -191,36 +192,33 @@ public class MyDispatcherServlet extends HttpServlet {
             // TODO 为什么传templateRoot，应该是template吧？？？
 //            this.viewResolvers.add(new MyViewResolver(templateRoot));
             // TODO 应该传入上级文件目录
-            this.viewResolvers.add(new MyViewResolver(templateRoot));
+            this.viewResolvers.add(new MyViewResolver(template));
         }
     }
 
 
-
-
-
-    private void initFlashMapManager(MyApplicationContext context) {
-        /**
-         * FlashMap 缓存参数，闪存，不永久的存
-         * request.forward()，自动携带上一次请求的所有参数
-         * response.redirect()，丢失上一次请求的所有参数
-         */
-    }
-
-    private void initRequestToViewNameTranslator(MyApplicationContext context) {
-    }
-
-    private void initHandlerExceptionResolvers(MyApplicationContext context) {
-    }
-
-    private void initThemeResolver(MyApplicationContext context) {
-    }
-
-    private void initLocaleResolver(MyApplicationContext context) {
-    }
-
-    private void initMutipartResolver(MyApplicationContext context) {
-    }
+//    private void initFlashMapManager(MyApplicationContext context) {
+//        /**
+//         * FlashMap 缓存参数，闪存，不永久的存
+//         * request.forward()，自动携带上一次请求的所有参数
+//         * response.redirect()，丢失上一次请求的所有参数
+//         */
+//    }
+//
+//    private void initRequestToViewNameTranslator(MyApplicationContext context) {
+//    }
+//
+//    private void initHandlerExceptionResolvers(MyApplicationContext context) {
+//    }
+//
+//    private void initThemeResolver(MyApplicationContext context) {
+//    }
+//
+//    private void initLocaleResolver(MyApplicationContext context) {
+//    }
+//
+//    private void initMutipartResolver(MyApplicationContext context) {
+//    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -233,9 +231,12 @@ public class MyDispatcherServlet extends HttpServlet {
             doDispatcher(req, resp);
         } catch (Exception e) {
             try {
-//                log.info("异常{}", e);
                 System.out.println(e);
-                processDispatcherResult(req, resp, new MyModelAndView("505"));
+                Map<String, Object> model = new HashMap<>();
+                model.put("detail", e.getMessage());
+                model.put("stackTrace", e.getStackTrace());
+                MyModelAndView mv = new MyModelAndView("500", model);
+                processDispatcherResult(req, resp, mv);
             } catch (Exception ex) {
                 ex.printStackTrace();
                 resp.getWriter().write("505, server error!");
@@ -244,7 +245,7 @@ public class MyDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * 功能描述：处理请求的入口
+     * 功能描述：处理请求的入口，委派模式，只调度不干活
      * @author ykq
      * @date 2020/5/19 20:56
      * @param
@@ -263,13 +264,11 @@ public class MyDispatcherServlet extends HttpServlet {
         // 2、适配器模式。根据一个HandlerMapping获得一个HandlerAdapter，动态解析参数。
         MyHandlerAdapter handlerAdapter = getHandlerAdapter(handler);
 
-        // 3、解析某一个方法的返回值后，统一封装成ModelAndView
+        // 3、用HandlerAdapter解析某一个方法的返回值后，统一封装成ModelAndView
         MyModelAndView mv = handlerAdapter.handler(req, resp, handler);
 
-        // 4、将mv变成一个可以输出的结果--ViewResolver
+        // 4、将mv渲染成一个可以输出的结果--ViewResolver
         processDispatcherResult(req, resp, mv);
-
-
     }
 
     /**
@@ -313,13 +312,15 @@ public class MyDispatcherServlet extends HttpServlet {
 //        if (this.viewResolvers != null) {   不太好，自以为用size>0比较好
 //        if (0 < this.viewResolvers.size()) {
         for (MyViewResolver viewResolver : this.viewResolvers) {
-            MyView view = viewResolver.resolveViewName(mv.getViewName(), null);
+            if (viewResolver.getViewName().equals(viewResolver.packAimViewName(mv.getViewName()))){
+                MyView view = viewResolver.resolveViewName(mv.getViewName(), null);
 
-            // 往浏览器输出
-            if (null != view) {
-                // 渲染
-                view.render(mv.getModel(), req, resp);
-                return;
+                // 往浏览器输出
+                if (null != view) {
+                    // 渲染
+                    view.render(mv.getModel(), req, resp);
+                    return;
+                }
             }
         }
 //        }

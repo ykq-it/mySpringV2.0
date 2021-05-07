@@ -30,8 +30,7 @@ public class MyHandlerAdapter {
      * @param
      * @return com.my.spring.framework.webmvc.MyModelAndView
      */
-    public MyModelAndView handler(HttpServletRequest req, HttpServletResponse resp, Object handler) throws Exception {
-        MyHandlerMapping handlerMapping = (MyHandlerMapping) handler;
+    public MyModelAndView handler(HttpServletRequest req, HttpServletResponse resp, MyHandlerMapping handlerMapping) throws Exception {
 
         // 1、封装形参列表，分类讨论：有注解的，没注解的。
         // 每个方法都有一个参数列表，这里保存的是形参列表中参数和位置的关系
@@ -66,13 +65,13 @@ public class MyHandlerAdapter {
         Object[] paramValue = new Object[paramTypes.length];
 
         for (Map.Entry<String, String[]> param: params.entrySet()) {
-            // TODO 初期简答的将数组转换成一个String，日后再拓展
-            String value = Arrays.toString(params.get(param.getKey())).replaceAll("\\[|\\]", "")
-                    .replaceAll("\\s", ",");
-
             if (!paramIndexMapping.containsKey(param.getKey())) {
                 continue;
             }
+
+            // TODO 初期简答的将数组转换成一个String，日后再拓展
+            String value = Arrays.toString(params.get(param.getKey())).replaceAll("\\[|\\]", "")
+                    .replaceAll("\\s", ",");
 
             int index = paramIndexMapping.get(param.getKey());
             // 将value转换成形参对应的类型，并按照形参的下标保存实参的值。 TODO 允许自定义类型转换器Converter
@@ -110,7 +109,7 @@ public class MyHandlerAdapter {
      */
     private Object castStringValue(String value, Class<?> clazz) {
         if (String.class == clazz) {
-            System.out.println();
+//            System.out.println();
             return value;
         } else if (Integer.class == clazz) {
             return Integer.valueOf(value);

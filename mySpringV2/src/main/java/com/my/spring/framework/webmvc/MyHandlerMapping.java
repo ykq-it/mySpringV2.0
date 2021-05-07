@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 
 /**
  * @ClassName MyHandlerMapping
- * @Description TODO 策略模式？？怎么策略的？用输入URL间接调用不同的Method以达到获取结果的目的
+ * @Description 策略模式，用输入URL间接调用不同的Method以达到获取结果的目的
  * @Author ykq
  * @Date 2020/5/18
  * @Version v1.0.0
