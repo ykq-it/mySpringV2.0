@@ -13,6 +13,7 @@ import com.my.spring.framework.annotation.MyService;
 public class CgLibTestServiceImpl {
 
     public String add(String name, String addr) {
+        System.out.println("doBusiness!!");
         return "CgLibTestService add, name=" + name + ", addr=" + addr;
     }
 }

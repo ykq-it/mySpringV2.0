@@ -1,11 +1,16 @@
 package com.my.spring.framework.aop.support;
 
 import com.my.spring.framework.aop.aspect.MyAdvice;
+import com.my.spring.framework.aop.aspect.MyAfterReturningAdviceInterceptor;
+import com.my.spring.framework.aop.aspect.MyAspectJAfterThrowingAdvice;
+import com.my.spring.framework.aop.aspect.MyMethodBeforeAdviceInterceptor;
 import com.my.spring.framework.aop.config.MyAopConfig;
 import lombok.Data;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,8 +37,11 @@ public class MyAdvisedSupport {
     /** 被编织类符合的正则 */
     private Pattern pointCutClassPattern;
 
+    /******缓存method与增强关系的硬编码*****/
+//    private Map<Method, Map<String, MyAdvice>> methodCache;
+    /******缓存method与增强关系的硬编码*****/
+    private Map<Method, List<Object>> methodCache;
 
-    private Map<Method, Map<String, MyAdvice>> methodCache;
 
     public MyAdvisedSupport(MyAopConfig aopConfig) {
         this.aopConfig = aopConfig;
@@ -93,25 +101,40 @@ public class MyAdvisedSupport {
                 // 作用是判断目标方法是否符合切面定义的切点
                 Matcher matcher = pointCutPattern.matcher(methodString);
                 if(matcher.matches()){
-                    Map<String,MyAdvice> adviceMap = new HashMap<>();
-                    // 如果配置文件有前置通知的方法名
-                    if(null != aopConfig.getAspectBefore() && !"".equals(aopConfig.getAspectBefore())){
-                        // key=before可否替换为aopConfig.getAspectBefore()？可以，但没必要，这里的字符串便是对配置文件key的规定
-                        adviceMap.put("before", new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
-                    }
-                    // 如果配置文件有后置通知的方法名
-                    if(null != aopConfig.getAspectAfter() && !"".equals(aopConfig.getAspectAfter())){
-                        adviceMap.put("after", new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfter())));
-                    }
-                    // 如果配置文件有异常通知的方法名
-                    if(null != aopConfig.getAspectAfterThrow() && !"".equals(aopConfig.getAspectAfterThrow())){
-                        MyAdvice advice = new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfterThrow()));
-                        advice.setThrowName(aopConfig.getAspectAfterThrowingName());
-                        adviceMap.put("afterThrow",advice);
-                    }
+//                    Map<String,MyAdvice> adviceMap = new HashMap<>();
+//                    // 如果配置文件有前置通知的方法名
+//                    if(null != aopConfig.getAspectBefore() && !"".equals(aopConfig.getAspectBefore())){
+//                        // key=before可否替换为aopConfig.getAspectBefore()？可以，但没必要，这里的字符串便是对配置文件key的规定
+//                        adviceMap.put("before", new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
+//                    }
+//                    // 如果配置文件有后置通知的方法名
+//                    if(null != aopConfig.getAspectAfter() && !"".equals(aopConfig.getAspectAfter())){
+//                        adviceMap.put("after", new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfter())));
+//                    }
+//                    // 如果配置文件有异常通知的方法名
+//                    if(null != aopConfig.getAspectAfterThrow() && !"".equals(aopConfig.getAspectAfterThrow())){
+//                        MyAdvice advice = new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfterThrow()));
+//                        advice.setThrowName(aopConfig.getAspectAfterThrowingName());
+//                        adviceMap.put("afterThrow",advice);
+//                    }
+//                    //跟目标代理类的业务方法和Advices建立一对多个关联关系，以便在Porxy类中获得
+//                    methodCache.put(method,adviceMap);
 
-                    //跟目标代理类的业务方法和Advices建立一对多个关联关系，以便在Porxy类中获得
-                    methodCache.put(method,adviceMap);
+                    List<Object> advices = new LinkedList<>();
+                    // TODO 这里可以改成循环，用策略模式，可以实现动态扩展
+                    // 如果配置文件有前置通知的方法名，创建对应的拦截器，入参切入的实例，和切入的方法
+                    if(null != aopConfig.getAspectBefore() && !"".equals(aopConfig.getAspectBefore())){
+                        advices.add(new MyMethodBeforeAdviceInterceptor(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
+                    }
+                    if(null != aopConfig.getAspectAfter() && !"".equals(aopConfig.getAspectAfter())){
+                        advices.add(new MyAfterReturningAdviceInterceptor(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfter())));
+                    }
+                    if(null != aopConfig.getAspectAfterThrow() && !"".equals(aopConfig.getAspectAfterThrow())){
+                        MyAspectJAfterThrowingAdvice advice = new MyAspectJAfterThrowingAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfterThrow()));
+                        advice.setThrowName(aopConfig.getAspectAfterThrowingName());
+                        advices.add(advice);
+                    }
+                    methodCache.put(method,advices);
                 }
             }
 
@@ -135,6 +158,7 @@ public class MyAdvisedSupport {
         return pointCutClassPattern.matcher(this.targetClass.toString()).matches();
     }
 
+    /******缓存method与增强关系的硬编码*****/
     /**
      * 功能描述： 根据一个目标类的方法获取其通知
      * @author ykq
@@ -142,8 +166,20 @@ public class MyAdvisedSupport {
      * @param
      * @return
      */
-    public Map<String, MyAdvice> getAdvices(Method method) throws NoSuchMethodException {
-        Map<String, MyAdvice> adviceMap = methodCache.get(method);
+//    public Map<String, MyAdvice> getAdvices(Method method) throws NoSuchMethodException {
+//        Map<String, MyAdvice> adviceMap = methodCache.get(method);
+//        if (null == adviceMap) {
+//            // 因为传入的method方法可能是代理对象的method，虽然名字相同，但不是一个同对象。所以重新利用相同的名字和形参拿到原始的Method对象
+//            Method method1 = targetClass.getMethod(method.getName(), method.getParameterTypes());
+//            adviceMap = methodCache.get(method1);
+//            methodCache.put(method1, adviceMap);
+//        }
+//        return adviceMap;
+//    }
+    /******缓存method与增强关系的硬编码*****/
+
+    public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method method, Class<?> targetClass) throws Exception {
+        List<Object> adviceMap = methodCache.get(method);
         if (null == adviceMap) {
             // 因为传入的method方法可能是代理对象的method，虽然名字相同，但不是一个同对象。所以重新利用相同的名字和形参拿到原始的Method对象
             Method method1 = targetClass.getMethod(method.getName(), method.getParameterTypes());
