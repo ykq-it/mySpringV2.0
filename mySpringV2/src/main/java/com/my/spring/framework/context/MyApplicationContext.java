@@ -3,6 +3,7 @@ package com.my.spring.framework.context;
 import com.my.spring.framework.annotation.MyAutowired;
 import com.my.spring.framework.annotation.MyController;
 import com.my.spring.framework.annotation.MyService;
+import com.my.spring.framework.aop.MyDefaultAopProxyFactory;
 import com.my.spring.framework.aop.MyJdkDynamicAopProxy;
 import com.my.spring.framework.aop.config.MyAopConfig;
 import com.my.spring.framework.aop.support.MyAdvisedSupport;
@@ -29,6 +30,9 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
 
     /** 上下文持有ListableBeanFactory的引用 */
     private MyDefaultListableBeanFactory registry = new MyDefaultListableBeanFactory();
+
+    /** 代理工厂，简单策略模式 */
+    private MyDefaultAopProxyFactory proxyFactory = new MyDefaultAopProxyFactory();
 
     /** 配置文件的地址 */
     private String[] configLocations;
@@ -327,17 +331,20 @@ public class MyApplicationContext extends MyAbstractApplicationContext implement
                 instance = clazz.newInstance();
 
                 /************************AOP开始***********************/
-//                // 1、加载AOP的配置文件
-//                // TODO 岂不是每个生成实例的对象都会获得一遍AdvisedSupport? 好像是的，每个类对应的AopConfig或许不同
-//                MyAdvisedSupport advisedSupport = instantionAopConfig(beanDefinition);
-//                advisedSupport.setTargetClass(clazz);  // 赋值的同时，解析并为各方法创建增强点和编织增强方法的映射
-//                advisedSupport.setTarget(instance);
-//
-//                // 判断规则，要不要生成代理类，如果要就覆盖原生对象。如果不要就不做任何处理，返回原生对象
-//                if (advisedSupport.pointCutMatch()) {
-//                    // Method threw 'java.lang.NullPointerException' exception. Cannot evaluate com.sun.proxy.$Proxy5.toString()
+                // 1、加载AOP的配置文件
+                // TODO 岂不是每个生成实例的对象都会获得一遍AdvisedSupport? 好像是的，每个类对应的AopConfig或许不同
+                MyAdvisedSupport advisedSupport = instantionAopConfig(beanDefinition);
+                // 赋值的同时，解析并为各方法创建增强点和编织增强方法的映射
+                advisedSupport.setTargetClass(clazz);
+                advisedSupport.setTarget(instance);
+
+                // 判断规则，要不要生成代理类，如果要就调用代理工厂生成代理对象覆盖原生对象，并且放入三级缓存。如果不要就不做任何处理，返回原生对象
+                if (advisedSupport.pointCutMatch()) {
+                    // Method threw 'java.lang.NullPointerException' exception. Cannot evaluate com.sun.proxy.$Proxy5.toString()
+                    // 策略工厂
+                    instance = proxyFactory.createAopProxy(advisedSupport).getProxy();
 //                    instance = new MyJdkDynamicAopProxy(advisedSupport).getProxy();
-//                }
+                }
                 /************************AOP结束***********************/
 
                 factoryBeanObjectCache.put(className, instance);

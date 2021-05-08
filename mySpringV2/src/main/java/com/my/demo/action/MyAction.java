@@ -2,6 +2,7 @@ package com.my.demo.action;
 
 import com.my.demo.service.ModifyService;
 import com.my.demo.service.QueryService;
+import com.my.demo.service.impl.CgLibTestServiceImpl;
 import com.my.spring.framework.annotation.MyAutowired;
 import com.my.spring.framework.annotation.MyController;
 import com.my.spring.framework.annotation.MyRequestMapping;
@@ -27,6 +28,9 @@ public class MyAction {
     @MyAutowired
     QueryService queryService;
 
+    @MyAutowired
+    CgLibTestServiceImpl cgLibTestServiceImpl;
+
     @MyRequestMapping("/query.json")
     public MyModelAndView query(HttpServletRequest request, HttpServletResponse response, @MyRequestParam("name") String name) {
         String result = queryService.query(name);
@@ -37,6 +41,13 @@ public class MyAction {
     public MyModelAndView add(HttpServletRequest request, HttpServletResponse response,
                               @MyRequestParam("name") String name, @MyRequestParam("addr") String addr){
         String result = modifyService.add(name,addr);
+        return out(response,result);
+    }
+
+    @MyRequestMapping("/testCg.json")
+    public MyModelAndView add1(HttpServletRequest request, HttpServletResponse response,
+                              @MyRequestParam("name") String name, @MyRequestParam("addr") String addr){
+        String result = cgLibTestServiceImpl.add(name,addr);
         return out(response,result);
     }
 

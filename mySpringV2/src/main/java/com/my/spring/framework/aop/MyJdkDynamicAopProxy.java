@@ -18,7 +18,7 @@ import java.util.Map;
  * @Version v1.0.0
  */
 @Data
-public class MyJdkDynamicAopProxy implements InvocationHandler {
+public class MyJdkDynamicAopProxy implements MyAopProxy, InvocationHandler {
     private MyAdvisedSupport advisedSupport;
 
     public MyJdkDynamicAopProxy(MyAdvisedSupport advisedSupport) {
@@ -27,29 +27,28 @@ public class MyJdkDynamicAopProxy implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        Map<String, MyAdvice> advices = advisedSupport.getAdvices(method, null);
-
+        System.out.println("Jdk Proxy!!!");
+        Map<String, MyAdvice> advices = advisedSupport.getAdvices(method);
         Object returnValue;
+
         try {
-            invokeAdivce(advices.get("before"));
+            invokeAdvice(advices.get("before"));
 
             returnValue = method.invoke(this.advisedSupport.getTarget(),args);
 
-            invokeAdivce(advices.get("after"));
+            invokeAdvice(advices.get("after"));
         }catch (Exception e){
-            invokeAdivce(advices.get("afterThrow"));
+            invokeAdvice(advices.get("afterThrow"));
             throw e;
         }
         return returnValue;
     }
 
-    private void invokeAdivce(MyAdvice advice) {
+    private void invokeAdvice(MyAdvice advice) {
         try {
             // 对带有指定参数的指定对象调用由此 Method 对象表示的底层方法。个别参数被自动解包，以便与基本形参相匹配，基本参数和引用参数都随需服从方法调用转换。
             advice.getAdviceMethod().invoke(advice.getAspect());
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -61,9 +60,15 @@ public class MyJdkDynamicAopProxy implements InvocationHandler {
      * @param
      * @return
      */
+    @Override
     public Object getProxy() {
         // 因为JDK实现动态代理业务的时候，只能针对接口进行代理。
 //        return Proxy.newProxyInstance(this.getClass().getClassLoader(), Object.class.getInterfaces(), this);
         return Proxy.newProxyInstance(this.getClass().getClassLoader(), this.advisedSupport.getTargetClass().getInterfaces(), this);
+    }
+
+    @Override
+    public Object getProxy(ClassLoader classLoader) {
+        return null;
     }
 }

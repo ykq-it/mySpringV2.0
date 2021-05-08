@@ -25,7 +25,7 @@ public class LogAspect {
     }
 
     public void afterThrowing(){
-        System.out.println("出现异常!!!");
-        log.info("出现异常");
+        System.out.println("throw Exception!!!");
+        log.info("throw Exception");
     }
 }

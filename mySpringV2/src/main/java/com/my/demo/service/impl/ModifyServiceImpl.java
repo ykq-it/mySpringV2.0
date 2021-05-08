@@ -23,6 +23,7 @@ public class ModifyServiceImpl implements ModifyService {
 
     @Override
     public String remove(Integer id) {
-        return "modifyService remove, id=" + id;
+//        return "modifyService remove, id=" + id;
+        throw new RuntimeException("故意抛出异常");
     }
 }

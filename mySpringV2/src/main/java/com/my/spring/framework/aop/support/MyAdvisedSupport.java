@@ -46,26 +46,31 @@ public class MyAdvisedSupport {
     }
 
     private void parse() {
-        // 把Spring的Express变成java能识别的正则表达式  // TODO 如果是自定义参数，不能硬编码为-4，怎么办？
-        String pointCut = aopConfig.getPointCut()
+        // 把Spring的Express变成java能识别的正则表达式  // TODO 如果是自定义方法名，如形参以name开头(.name*)，不能硬编码为-4，怎么办？
+        // 权限修饰符 返回值类型 包名.类名.方法名(形参列表)
+        // public .* com.my.demo.service..*ServiceImpl..*(.*)
+        // 得到真正的正则表达式
+        String pointCutRegex = aopConfig.getPointCut()
                 .replaceAll("\\.", "\\\\.")
                 .replaceAll("\\\\.\\*", ".*")
                 .replaceAll("\\(", "\\\\(")
                 .replaceAll("\\)", "\\\\)");
 
         // 生成匹配class的正则
-        // TODO 验证是否是public .* com.my.demo.service..*ServiceImpl
-        String pointCutForClassRegex = pointCut.substring(0, pointCut.lastIndexOf("\\(") - 4);
-        // TODO 验证是否是com.my.demo.service..*ServiceImpl
+        // 验证是public .* com.my.demo.service..*ServiceImpl
+        String pointCutForClassRegex = pointCutRegex.substring(0, pointCutRegex.lastIndexOf("\\(") - 4);
+        // 验证是com.my.demo.service..*ServiceImpl
         String classNameLike = pointCutForClassRegex.substring(pointCutForClassRegex.lastIndexOf(" ") + 1);
-        // TODO 为什么class+" "+classNameLike
+        // 为什么class+" "+classNameLike？因为正则匹配的this.targetClass.toString()是这个格式
         pointCutClassPattern = Pattern.compile("class " + classNameLike);
 
-        // 享元的共享池
+        // 享元的共享池，保存回调通知和目标切点之间的关系。如：
+        // query方法要织入 before() after()
+        // add方法要织入 afterThrowing()  rollback()
         methodCache = new HashMap<>();
 
-        // TODO 保存专门匹配方法的正则，有什么用？
-        Pattern pointCutPattern = Pattern.compile(pointCut);
+        // 编译并保存专门匹配方法的正则，有什么用？
+        Pattern pointCutPattern = Pattern.compile(pointCutRegex);
         try {
             // 创建切面类的类型类
             Class aspectClass = Class.forName(this.aopConfig.getAspectClass());
@@ -80,25 +85,26 @@ public class MyAdvisedSupport {
             for (Method method : this.targetClass.getMethods()) {
                 // 验证toString获得的是什么？ public java.lang.String com.my.demo.service.impl.DemoServiceImpl.get(java.lang.String) 生成的字符串的规则和切面配置相同，用于正则匹配
                 String methodString = method.toString();
-                if(methodString.contains("throws")){  // 如果method有throw异常，则截断异常
+                if(methodString.contains("throws")){
+                    // 如果method有throw异常，则截掉异常
                     methodString = methodString.substring(0,methodString.lastIndexOf("throws")).trim();
                 }
 
-                // TODO 验证。作用是判断目标方法是否符合切面定义的切点
+                // 作用是判断目标方法是否符合切面定义的切点
                 Matcher matcher = pointCutPattern.matcher(methodString);
                 if(matcher.matches()){
                     Map<String,MyAdvice> adviceMap = new HashMap<>();
                     // 如果配置文件有前置通知的方法名
-                    if(!(null == aopConfig.getAspectBefore() || "".equals(aopConfig.getAspectBefore()))){
-                        // TODO key=before可否替换为aopConfig.getAspectBefore()
+                    if(null != aopConfig.getAspectBefore() && !"".equals(aopConfig.getAspectBefore())){
+                        // key=before可否替换为aopConfig.getAspectBefore()？可以，但没必要，这里的字符串便是对配置文件key的规定
                         adviceMap.put("before", new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
                     }
                     // 如果配置文件有后置通知的方法名
-                    if(!(null == aopConfig.getAspectAfter() || "".equals(aopConfig.getAspectAfter()))){
+                    if(null != aopConfig.getAspectAfter() && !"".equals(aopConfig.getAspectAfter())){
                         adviceMap.put("after", new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfter())));
                     }
                     // 如果配置文件有异常通知的方法名
-                    if(!(null == aopConfig.getAspectAfterThrow() || "".equals(aopConfig.getAspectAfterThrow()))){
+                    if(null != aopConfig.getAspectAfterThrow() && !"".equals(aopConfig.getAspectAfterThrow())){
                         MyAdvice advice = new MyAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfterThrow()));
                         advice.setThrowName(aopConfig.getAspectAfterThrowingName());
                         adviceMap.put("afterThrow",advice);
@@ -136,13 +142,13 @@ public class MyAdvisedSupport {
      * @param
      * @return
      */
-    public Map<String, MyAdvice> getAdvices(Method method, Object o) throws NoSuchMethodException {
+    public Map<String, MyAdvice> getAdvices(Method method) throws NoSuchMethodException {
         Map<String, MyAdvice> adviceMap = methodCache.get(method);
         if (null == adviceMap) {
+            // 因为传入的method方法可能是代理对象的method，虽然名字相同，但不是一个同对象。所以重新利用相同的名字和形参拿到原始的Method对象
             Method method1 = targetClass.getMethod(method.getName(), method.getParameterTypes());
-            // TODO 这一步有问题吧？上一步拿不到，这一步就能拿到了吗？
             adviceMap = methodCache.get(method1);
-            this.methodCache.put(method1, adviceMap);
+            methodCache.put(method1, adviceMap);
         }
         return adviceMap;
     }

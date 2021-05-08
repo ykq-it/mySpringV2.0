@@ -65,6 +65,13 @@
       <artifactId>slf4j-api</artifactId>
       <version>1.7.25</version>
     </dependency>
+
+    <!-- AOP时创建无实现接口的类的代理时使用 https://mvnrepository.com/artifact/cglib/cglib -->
+    <dependency>
+      <groupId>cglib</groupId>
+      <artifactId>cglib</artifactId>
+      <version>3.2.6</version>
+    </dependency>
   </dependencies>
 
   <build>
