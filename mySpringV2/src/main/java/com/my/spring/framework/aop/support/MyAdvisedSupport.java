@@ -179,13 +179,13 @@ public class MyAdvisedSupport {
     /******缓存method与增强关系的硬编码*****/
 
     public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method method, Class<?> targetClass) throws Exception {
-        List<Object> adviceMap = methodCache.get(method);
-        if (null == adviceMap) {
+        List<Object> interceptors = methodCache.get(method);
+        if (null == interceptors) {
             // 因为传入的method方法可能是代理对象的method，虽然名字相同，但不是一个同对象。所以重新利用相同的名字和形参拿到原始的Method对象
             Method method1 = targetClass.getMethod(method.getName(), method.getParameterTypes());
-            adviceMap = methodCache.get(method1);
-            methodCache.put(method1, adviceMap);
+            interceptors = methodCache.get(method1);
+            methodCache.put(method1, interceptors);
         }
-        return adviceMap;
+        return interceptors;
     }
 }

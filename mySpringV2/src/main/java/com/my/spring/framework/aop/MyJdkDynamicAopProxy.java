@@ -30,6 +30,7 @@ public class MyJdkDynamicAopProxy implements MyAopProxy, InvocationHandler {
         System.out.println("Jdk Proxy!!!");
         List<Object> chain = advised.getInterceptorsAndDynamicInterceptionAdvice(method, advised.getTargetClass());
 
+        // 参数：当前的代理类对象，当前的代理的原生对象，当前执行的方法，参数，当前的代理的原生类型，拦截器链
         MyMethodInvocation methodInvocation = new MyMethodInvocation(proxy, advised.getTarget(), method, args, advised.getTargetClass(), chain);
         return methodInvocation.proceed();
     }
